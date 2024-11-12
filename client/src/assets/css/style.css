@@ -1,0 +1,23 @@
+body.sp-body {
+  background-color: var(--background);
+}
+
+.swiper-pagination {
+  z-index: 100 !important;
+  bottom: 0 !important;
+}
+
+/* body.sp-body::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 100vw;
+  background-image: url("../images/helali2.jpg");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: blur(4px);
+  z-index: -1;
+} */

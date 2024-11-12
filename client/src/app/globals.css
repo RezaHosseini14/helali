@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .glass-back {
+    @apply bg-mainColor/20 backdrop-blur-md;
+  }
+}
+
+:root {
+  --background: #dbe2ef;
+  /* --background: #f4f5f7; */
+  --mainColor: #3f72af;
+}
+
+body {
+  background: var(--background);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
