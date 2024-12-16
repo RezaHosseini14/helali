@@ -1,14 +1,10 @@
 import { Injectable, Logger, NestMiddleware } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
 import { Request, Response } from 'express';
-import { Model } from 'mongoose';
-import { AuditLog } from 'src/schemas/AuditLog.schema';
 
 @Injectable()
 export class AuditLogMiddleware implements NestMiddleware {
-  constructor(
-    @InjectModel(AuditLog.name) private auditLogModel: Model<AuditLog>,
-  ) {}
+  constructor() // @InjectModel(AuditLog.name) private auditLogModel: Model<AuditLog>,
+  {}
 
   async use(req: Request, res: Response, next: () => void) {
     const startAt = process.hrtime();
@@ -27,17 +23,17 @@ export class AuditLogMiddleware implements NestMiddleware {
       const dif = process.hrtime(startAt);
       const responseTime = dif[0] * 1e3 + dif[1] * 1e-6;
 
-      const auditLog = await this.auditLogModel.create({
-        // username: req.user.username,
-        // userid: req.userId,
-        ip: ipAddress,
-        baseUrl,
-        statusCode,
-        method,
-        browser: browserInfo[1] || 'Unknown',
-        browserType: browserInfo[2] || 'Unknown',
-        responseTime: responseTime.toFixed(2),
-      });
+      // const auditLog = await this.auditLogModel.create({
+      //   // username: req.user.username,
+      //   // userid: req.userId,
+      //   ip: ipAddress,
+      //   baseUrl,
+      //   statusCode,
+      //   method,
+      //   browser: browserInfo[1] || 'Unknown',
+      //   browserType: browserInfo[2] || 'Unknown',
+      //   responseTime: responseTime.toFixed(2),
+      // });
     });
 
     next();

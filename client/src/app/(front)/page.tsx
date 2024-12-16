@@ -14,7 +14,7 @@ export default function LandingPage() {
           height={40}
         />
         <Image
-          className="absolute left-32 top-64"
+          className="absolute sm:left-32 sm:top-64 sm:right-auto right-1/2 sm:translate-x-0 translate-x-1/2 top-16"
           src="/images/logo.svg"
           alt="logo"
           width={300}

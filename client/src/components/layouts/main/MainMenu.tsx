@@ -23,7 +23,7 @@ function MainMenu() {
       id="parent"
       className="tab-menue px-6 rounded-xl w-72 h-12 bg-white/70 z-50 !fixed bottom-4 right-1/2 translate-x-1/2 backdrop-blur-lg shadow-xl"
     >
-      <ul className="flex items-center gap-8 h-full text-2xl text-mainColor relative">
+      <ul className="flex items-center justify-around h-full text-2xl text-mainColor relative">
         {menuItems.map((item: MenuItemsType, index: number) => (
           <li key={index}>
             <Link
@@ -37,7 +37,7 @@ function MainMenu() {
       </ul>
       <div
         id="border"
-        className=" h-1 w-6 bg-mainColor bottom-1 absolute transition-all rounded-lg"
+        className="h-1 w-6 bg-mainColor bottom-1 absolute transition-all rounded-lg right-[2.6rem]"
       ></div>
     </div>
   );

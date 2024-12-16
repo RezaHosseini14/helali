@@ -16,14 +16,9 @@ export const menuItems: MenuItemsType[] = [
     icon: "ki-category",
   },
   {
-    title: "خانه",
-    url: "/",
-    icon: "ki-home",
-  },
-  {
-    title: "خانه",
-    url: "/",
-    icon: "ki-home",
+    title: "صوت‌ها",
+    url: "/audio/1",
+    icon: "ki-abstract-45",
   },
   {
     title: "کاربر",

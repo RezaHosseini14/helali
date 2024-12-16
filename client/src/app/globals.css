@@ -1,25 +1,71 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
 
 @layer components {
   .glass-back {
     @apply bg-mainColor/20 backdrop-blur-md;
   }
+  .card-box {
+    @apply rounded-xl border border-gray-600 bg-mainstructure p-4;
+  }
+
+  .dashboard-header-item {
+    @apply size-10 grid place-content-center bg-maincolor rounded-full text-xl;
+  }
 }
 
 :root {
-  --background: #dbe2ef;
+  /* --background: #dbe2ef; */
+  /* --background: #1f383512; */
   /* --background: #f4f5f7; */
-  --mainColor: #3f72af;
+  /* --mainColor: #1f3835; */
+  /* --mainColor: #3f72af; */
+  --plyr-color-main: var(--mainColor);
+  /* ///////////////////////////////////////////// */
+  --background: #ffffff;
+  --foreground: #171717;
+  --mainstructure: 30 41 59;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 15 23 42;
+    --foreground: #ededed;
+    --mainstructure: 30 41 59;
+    --maincolor: #1c658c;
+
+    /* --maincolor: #03346e; */
+    /* --maincolor: #406882; */
+    /* --maincolor: #205375; */
+  }
 }
 
 body {
-  background: var(--background);
+  color: var(--foreground);
+  background: rgb(var(--background));
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+.rs-input,
+.rs-picker {
+  background-color: rgb(var(--background)) !important;
+  border: 1px solid var(--maincolor) !important;
+}
+.rs-picker-input .rs-btn {
+  background-color: rgb(var(--background)) !important;
+}
+
+.rs-table {
+  border-radius: 1rem;
+  border: 1px solid var(--mainstructure);
+}
+
+.rs-table-cell,
+.rs-table-cell-header .rs-table-cell {
+  background-color: rgb(var(--background)) !important;
 }

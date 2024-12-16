@@ -1,15 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Req,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -22,22 +11,15 @@ import { Request } from 'express';
 
 @Controller('user')
 @ApiTags('User')
-@ApiBearerAuth()
-@Roles(Role.ADMIN)
-@UseGuards(AuthGuard, RoleGuard)
+// @ApiBearerAuth()
+// @Roles(Role.ADMIN)
+// @UseGuards(AuthGuard, RoleGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post()
-  @Roles(Role.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.userService.create(createUserDto);
-  }
-
   @Get()
-  @Roles(Role.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
+  // @Roles(Role.ADMIN)
+  // @UseGuards(AuthGuard, RoleGuard)
   findAll(@Query() query) {
     const { page, limit } = query;
     return this.userService.findAll(page, limit);

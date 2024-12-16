@@ -1,4 +1,10 @@
-import { IsArray, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class regsterAuthDto {
   @IsNotEmpty({ message: 'نام کاربری نمی‌تواند خالی باشد.' })
@@ -21,7 +27,19 @@ export class regsterAuthDto {
   @IsString()
   last_name: string;
 
-  @IsNotEmpty({ message: 'نقش‌ها نمی‌توانند خالی باشند.' })
-  @IsArray({ message: 'نقش‌ها باید یک آرایه باشد.' })
-  roles: string[];
+  @IsNotEmpty({ message: 'تلفن همراه نمی‌تواند خالی باشد.' })
+  @IsString()
+  phone_number: string;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'سن باید یک عدد باشد.' })
+  age: number;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'ایمیل وارد شده معتبر نیست.' })
+  email: string;
+
+  // @IsNotEmpty({ message: 'نقش‌ها نمی‌توانند خالی باشند.' })
+  // @IsArray({ message: 'نقش‌ها باید یک آرایه باشد.' })
+  // roles: string[];
 }

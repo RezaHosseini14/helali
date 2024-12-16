@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Req,
-  UseGuards,
-  Res,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, UseGuards, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { regsterAuthDto } from './dto/register-auth.dto';
 import { Request, Response } from 'express';
@@ -31,15 +23,7 @@ export class AuthController {
   login(@Body() loginAuthDto: loginAuthDto, @Res() res: Response) {
     return this.authService.login(loginAuthDto, res);
   }
-
-  @Get()
-  @Roles(Role.ADMIN)
-  @UseGuards(AuthGuard, RoleGuard)
-  findAll(@Req() request: Request) {
-    const ipAddress = request.ip;
-    return `IP Address: ${ipAddress}`;
-  }
-
+  
   @Get('/logout')
   logout(@Res() res: Response) {
     return this.authService.logout(res);

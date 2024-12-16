@@ -7,17 +7,23 @@ body.sp-body {
   bottom: 0 !important;
 }
 
-/* body.sp-body::before {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 0;
-  height: 100vh;
-  width: 100vw;
-  background-image: url("../images/helali2.jpg");
-  background-size: cover;
-  background-repeat: no-repeat;
-  background-position: center;
-  filter: blur(4px);
-  z-index: -1;
-} */
+.loader {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--mainColor);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* rsuite change start */
+.rs-form:not(.rs-form-inline) .rs-form-group:not(:last-child) {
+  margin-bottom: 0 !important;
+}
+/* rsuite change end */

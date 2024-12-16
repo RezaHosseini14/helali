@@ -1,3 +1,4 @@
+"use client"
 import React, { ReactNode } from "react";
 type PanelPropsType = {
   children: ReactNode;
@@ -15,7 +16,7 @@ function Panel({
 }: PanelPropsType) {
   return (
     <div
-      className={`text-mainColor ${
+      className={`text-mainColor shadow-2xl ${
         fill ? "glass-back rounded-xl p-4" : ""
       }`}
     >

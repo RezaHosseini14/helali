@@ -23,18 +23,11 @@ export class MinioService {
         'Content-Type': file.mimetype,
       };
 
-      return await this.minioClient.putObject(
-        bucketName,
-        file.originalname,
-        file.buffer,
-        file.size,
-        metaData,
-      );
+      await this.minioClient.putObject(bucketName, file.originalname, file.buffer, file.size, metaData);
+      return { message: 'فایل با موفقیت آپلود شد' };
     } catch (error) {
-      throw new HttpException(
-        'مشکلی در آپلود فایل رخ داد',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      console.error('خطا در آپلود فایل:', error); // چاپ جزئیات خطا
+      throw new HttpException(`مشکلی در آپلود فایل رخ داد: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 
@@ -53,5 +46,24 @@ export class MinioService {
       stream.on('error', (err) => reject(err));
       stream.on('end', () => resolve(items));
     });
+  }
+
+  async getPresignedUrl(bucketName: string, fileName: string, expiresIn: number): Promise<string> {
+    try {
+      const presignedUrl = await this.minioClient.presignedGetObject(bucketName, fileName, expiresIn);
+      return presignedUrl;
+    } catch (err) {
+      throw new Error(`Error generating presigned URL: ${err.message}`);
+    }
+  }
+
+  async deleteFile(bucketName: string, fileName: string) {
+    try {
+      await this.minioClient.removeObject(bucketName, fileName);
+      return { message: 'فایل با موفقیت حذف شد' };
+    } catch (error) {
+      console.error('خطا در حذف فایل:', error);
+      throw new HttpException(`مشکلی در حذف فایل رخ داد: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

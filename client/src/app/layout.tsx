@@ -1,15 +1,23 @@
-import type { Metadata } from "next";
-import "./globals.css";
-import "@/assets/css/style.css";
-import "@/assets/fonts/keenicons/icon.css";
-import "@/assets/fonts/ERPyb/ERPyb.css";
+import type { Metadata } from 'next';
+import dynamic from 'next/dynamic';
+import 'rsuite/dist/rsuite-rtl.min.css';
+import './globals.css';
+import '@/assets/css/style.css';
+import '@/assets/fonts/keenicons/icon.css';
+import '@/assets/fonts/ERPyb/ERPyb.css';
 
-import "rsuite/dist/rsuite-no-reset.min.css";
-import RsuiteProvider from "providers/RsuiteProvider";
+import 'plyr/dist/plyr.css';
+// import RsuiteProvider from 'providers/RsuiteProvider';
+// import ReactQueryProvider from 'providers/ReactQueryProvider';
+// import ReduxProvider from 'providers/ReduxProvider';
+
+const RsuiteProvider = dynamic(() => import('providers/RsuiteProvider'), { ssr: false });
+const ReactQueryProvider = dynamic(() => import('providers/ReactQueryProvider'), { ssr: false });
+const ReduxProvider = dynamic(() => import('providers/ReduxProvider'), { ssr: false });
 
 export const metadata: Metadata = {
-  title: "پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی",
-  description: "پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی",
+  title: 'پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی',
+  description: 'پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی',
 };
 
 export default function RootLayout({
@@ -20,7 +28,11 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl">
       <body>
-        <RsuiteProvider>{children}</RsuiteProvider>
+        <ReduxProvider>
+          <RsuiteProvider>
+            <ReactQueryProvider>{children}</ReactQueryProvider>
+          </RsuiteProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

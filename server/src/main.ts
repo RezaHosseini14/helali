@@ -11,30 +11,49 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   const corsOptions: CorsOptions = {
-    origin: '*',
+    origin: 'http://localhost:3001',
     credentials: true,
   };
-  
+
   app.useStaticAssets('public');
   app.enableCors(corsOptions);
   app.use(passport.initialize());
   app.use(cookieParser());
 
-  // app.useGlobalPipes(
-  //   new ValidationPipe({
-  //     whitelist: true,
-  //     exceptionFactory: (errors) => {
-  //       const messages = errors.map(
-  //         (error) => error.constraints[Object.keys(error.constraints)[1]],
-  //       );
-  //       throw new BadRequestException({
-  //         message: messages,
-  //         error: 'Bad Request',
-  //         statusCode: 400,
-  //       });
-  //     },
-  //   }),
-  // );
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          const constraints = error.constraints;
+          const constraintKeys = Object.keys(constraints);
+
+          const errorMessage = {
+            isString: 'این فیلد باید یک رشته باشد',
+            isEmail: 'ایمیل وارد شده معتبر نیست',
+            isNotEmpty: 'این فیلد نباید خالی باشد',
+            minLength: 'طول فیلد کوتاه است',
+            maxLength: 'طول فیلد بیش از حد است',
+          };
+
+          const errorKey = constraintKeys[0];
+          const fieldName = error.property; // نام فیلد مشکل‌دار
+
+          return {
+            field: fieldName,
+            message: errorMessage[errorKey] || 'مقدار وارد شده صحیح نیست',
+          };
+        });
+
+        throw new BadRequestException({
+          message: messages,
+          error: 'درخواست نامعتبر',
+          statusCode: 400,
+        });
+      },
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Helali')
