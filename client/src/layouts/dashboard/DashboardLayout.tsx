@@ -31,7 +31,7 @@ function DashboardLayout({ children }: { children: ReactNode }) {
           className={`flex flex-1 flex-col gap-8 transition-all duration-500 ${sidebarStatus ? 'ms-[22rem]' : 'ms-36'}`}
         >
           <Header />
-          <MyBreadcrumb />
+          {/* <MyBreadcrumb /> */}
           {children}
         </div>
       </div>

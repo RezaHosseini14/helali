@@ -10,11 +10,12 @@ export type AudioPropsTypes = {
   audioWidth?: number;
   audioHeight?: number;
   height?: string;
+  showImage?: boolean;
 };
 const formatTime = (seconds: number) =>
   [seconds / 60, seconds % 60].map((v) => `0${Math.floor(v)}`.slice(-2)).join(':');
 
-function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height }: AudioPropsTypes) {
+function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height, showImage }: AudioPropsTypes) {
   const containerRef = useRef<null | any>(null);
   const [urlIndex, setUrlIndex] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -58,9 +59,11 @@ function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height }: Audi
         height ? height : 'h-24'
       } bg-mainColor/50 backdrop-blur-md rounded-xl p-2 flex gap-2`}
     >
-      <div className="rounded-lg bg-white aspect-square h-full overflow-hidden relative">
-        <Image src={audioDetails.posterPath} alt={audioDetails.title} layout="fill" objectFit="cover" />
-      </div>
+      {showImage ? (
+        <div className="rounded-lg bg-white aspect-square h-full overflow-hidden relative">
+          <Image src={audioDetails.posterPath} alt={audioDetails.title} layout="fill" objectFit="cover" />
+        </div>
+      ) : null}
       <div className="flex flex-col flex-1 gap-2 text-white">
         <span className="font-bold">{audioDetails?.title}</span>
         <div className="flex items-center gap-1">
@@ -68,7 +71,7 @@ function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height }: Audi
             <div ref={containerRef} style={!isReady ? { display: 'none' } : { display: 'flex' }} />
           </div>
 
-          <button onClick={onPlayPause} className="flex items-center gap-2 justify-center text-white size-6">
+          <button onClick={onPlayPause} className="grid place-content-center text-white size-[33px] ">
             {isPlaying ? (
               <i className="ki-solid ki-row-vertical text-2xl"></i>
             ) : (

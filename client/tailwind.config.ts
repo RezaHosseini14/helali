@@ -7,6 +7,8 @@ const config: Config = {
     // './src/app/**/*.{js,ts,jsx,tsx,mdx}',
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'class', // تنظیم حالت دارک مود (با استفاده از کلاس 'dark')
+
   theme: {
     extend: {
       colors: {

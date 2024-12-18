@@ -207,4 +207,71 @@ export class AudioService {
       throw new HttpException('مشکلی در حذف فایل رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async updateAudio(
+    id: number,
+    updateAudioDto: Partial<CreateAudioDto>,
+    bucketName: string,
+    posterBucket: string,
+    audioFile?: Express.Multer.File,
+    posterFile?: Express.Multer.File,
+  ) {
+    try {
+      const audio = await this.audioRepository.findOne({
+        where: { id },
+        relations: ['categories'],
+      });
+
+      if (!audio) {
+        throw new HttpException('فایل موردنظر یافت نشد', HttpStatus.NOT_FOUND);
+      }
+
+      const { title, text, categories } = updateAudioDto;
+
+      // Update fields if provided
+      if (title) audio.title = title;
+      if (text) audio.text = text;
+
+      if (categories) {
+        const audioCategories = await this.categoryRepository.findBy({
+          id: In(categories),
+        });
+        if (audioCategories.length !== categories.length) {
+          throw new HttpException('دسته‌بندی‌های وارد شده معتبر نیستند', HttpStatus.BAD_REQUEST);
+        }
+        audio.categories = audioCategories;
+      }
+
+      // Handle audio file update if provided
+      if (audioFile) {
+        if (audioFile.mimetype !== 'audio/mpeg') {
+          throw new HttpException('فایل صوتی باید mp3 باشد', HttpStatus.BAD_REQUEST);
+        }
+        const newAudioFileName = `${Date.now()}.${audioFile.originalname.split('.').pop()}`;
+        await this.minioService.uploadFile(bucketName, { ...audioFile, originalname: newAudioFileName });
+        await this.minioService.deleteFile(bucketName, audio.originalName);
+        audio.originalName = newAudioFileName;
+        audio.path = `http://${process.env.MINIO_URL}:${process.env.MINIO_PORT}/${bucketName}/${newAudioFileName}`;
+      }
+
+      // Handle poster file update if provided
+      if (posterFile) {
+        if (!posterFile.mimetype.startsWith('image/')) {
+          throw new HttpException('فایل پوستر باید تصویر باشد', HttpStatus.BAD_REQUEST);
+        }
+        const newPosterFileName = `${Date.now()}.${posterFile.originalname.split('.').pop()}`;
+        await this.minioService.uploadFile(posterBucket, { ...posterFile, originalname: newPosterFileName });
+        await this.minioService.deleteFile(posterBucket, audio.posterOriginalName);
+        audio.posterOriginalName = newPosterFileName;
+        audio.posterPath = `http://${process.env.MINIO_URL}:${process.env.MINIO_PORT}/${posterBucket}/${newPosterFileName}`;
+      }
+
+      await this.audioRepository.save(audio);
+
+      return { message: 'فایل با موفقیت به‌روزرسانی شد', statusCode: HttpStatus.OK };
+    } catch (error) {
+      console.error('خطا در به‌روزرسانی فایل:', error);
+      throw new HttpException('مشکلی در به‌روزرسانی فایل رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

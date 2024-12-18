@@ -1,17 +1,13 @@
 import type { Metadata } from 'next';
 import dynamic from 'next/dynamic';
-import 'rsuite/dist/rsuite-rtl.min.css';
+
+import 'rsuite/dist/rsuite-no-reset-rtl.min.css';
 import './globals.css';
 import '@/assets/css/style.css';
 import '@/assets/fonts/keenicons/icon.css';
 import '@/assets/fonts/ERPyb/ERPyb.css';
-
 import 'plyr/dist/plyr.css';
-// import RsuiteProvider from 'providers/RsuiteProvider';
-// import ReactQueryProvider from 'providers/ReactQueryProvider';
-// import ReduxProvider from 'providers/ReduxProvider';
 
-const RsuiteProvider = dynamic(() => import('providers/RsuiteProvider'), { ssr: false });
 const ReactQueryProvider = dynamic(() => import('providers/ReactQueryProvider'), { ssr: false });
 const ReduxProvider = dynamic(() => import('providers/ReduxProvider'), { ssr: false });
 
@@ -27,11 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fa" dir="rtl">
-      <body>
+      <body className="main">
         <ReduxProvider>
-          <RsuiteProvider>
-            <ReactQueryProvider>{children}</ReactQueryProvider>
-          </RsuiteProvider>
+          <ReactQueryProvider>{children}</ReactQueryProvider>
         </ReduxProvider>
       </body>
     </html>

@@ -14,9 +14,11 @@
   .card-box {
     @apply rounded-xl border border-gray-600 bg-mainstructure p-4;
   }
-
   .dashboard-header-item {
     @apply size-10 grid place-content-center bg-maincolor rounded-full text-xl;
+  }
+  .remove-btn {
+    @apply absolute left-2 top-2 text-red-500 z-10 text-2xl bg-red-700/30 backdrop-blur-lg rounded-full shadow-lg;
   }
 }
 
@@ -28,6 +30,10 @@
   /* --mainColor: #3f72af; */
   --plyr-color-main: var(--mainColor);
   /* ///////////////////////////////////////////// */
+  --mainbackground: #eff0f0;
+  --mainforeground: #171717;
+  /* ///////////////////////////////////////////// */
+
   --background: #ffffff;
   --foreground: #171717;
   --mainstructure: 30 41 59;
@@ -44,28 +50,4 @@
     /* --maincolor: #406882; */
     /* --maincolor: #205375; */
   }
-}
-
-body {
-  color: var(--foreground);
-  background: rgb(var(--background));
-}
-
-.rs-input,
-.rs-picker {
-  background-color: rgb(var(--background)) !important;
-  border: 1px solid var(--maincolor) !important;
-}
-.rs-picker-input .rs-btn {
-  background-color: rgb(var(--background)) !important;
-}
-
-.rs-table {
-  border-radius: 1rem;
-  border: 1px solid var(--mainstructure);
-}
-
-.rs-table-cell,
-.rs-table-cell-header .rs-table-cell {
-  background-color: rgb(var(--background)) !important;
 }

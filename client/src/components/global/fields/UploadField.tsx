@@ -4,18 +4,21 @@ import { uploaderStyle } from '@/jsons/style';
 import { Form, Uploader } from 'rsuite';
 
 type UploadFieldType = {
-  title: string;
+  title?: string;
   name: string;
   handleImageChange: (images: File) => void;
   accept: string;
   containerClassName?: string;
   fileList: any;
+  lable?: boolean;
 };
 
 function UploadField(props: UploadFieldType) {
   return (
     <Form.Group className={props.containerClassName}>
-      <Form.ControlLabel className="font-semibold text-base text-spGreen">{props.title}</Form.ControlLabel>
+      {props.lable ? (
+        <Form.ControlLabel className="font-semibold text-base text-spGreen">{props.title}</Form.ControlLabel>
+      ) : null}
 
       <Uploader
         fileList={props.fileList}

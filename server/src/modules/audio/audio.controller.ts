@@ -15,6 +15,7 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { AudioService } from './audio.service';
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateAudioDto } from './dto/create-audio.dto';
+import { UpdateAudioDto } from './dto/update-audio.dto';
 
 @Controller('audio')
 @ApiTags('audio')
@@ -126,5 +127,62 @@ export class AudioController {
     const bucketName = 'audio-bucket';
     const posterBucket = 'poster-bucket';
     return await this.audioService.deleteAudio(id, bucketName, posterBucket);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update audio file, poster, or categories' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Update audio with optional title, poster, categories, or audio file',
+    schema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', example: 'Updated Audio Title' },
+        text: { type: 'string', example: 'Updated description of the audio' },
+        categories: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Array of category IDs (optional)',
+          example: [2, 3],
+        },
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Optional updated audio file',
+        },
+        poster: {
+          type: 'string',
+          format: 'binary',
+          description: 'Optional updated poster image',
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Audio updated successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'file', maxCount: 1 },
+      { name: 'poster', maxCount: 1 },
+    ]),
+  )
+  async updateFile(
+    @Param('id') id: number,
+    @Body() updateAudioDto: Partial<CreateAudioDto>,
+    @UploadedFiles()
+    files: {
+      file?: Express.Multer.File[];
+      poster?: Express.Multer.File[];
+    },
+  ) {
+    console.log(updateAudioDto);
+    
+    const audioFile = files.file?.[0];
+    const posterFile = files.poster?.[0];
+
+    const bucketName = 'audio-bucket';
+    const posterBucket = 'poster-bucket';
+
+    return await this.audioService.updateAudio(id, updateAudioDto, bucketName, posterBucket, audioFile, posterFile);
   }
 }

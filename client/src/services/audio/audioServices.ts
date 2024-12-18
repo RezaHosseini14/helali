@@ -12,6 +12,10 @@ export function uploadAudio(body: any) {
   return http.post('/audio/upload', body);
 }
 
+export function updateAudioById(body: any, id: number) {
+  return http.patch(`/audio/${id}`, body);
+}
+
 export function addAudioComment(id: number, body: any) {
   return http.post(`/comments/audio/${id}`, body);
 }

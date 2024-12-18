@@ -10,6 +10,13 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const htmlElement = document.documentElement;
     htmlElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    if (darkMode) {
+      htmlElement.classList.add('dark');
+      htmlElement.classList.remove('light');
+    } else {
+      htmlElement.classList.add('light');
+      htmlElement.classList.remove('dark');
+    }
   }, [darkMode]);
 
   return <>{children}</>;

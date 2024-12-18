@@ -1,21 +1,24 @@
-import MainLayout from "@/layouts/main/MainLayout";
-import type { Metadata } from "next";
-import "../globals.css";
-import "@/assets/css/style.css";
-import "@/assets/fonts/keenicons/icon.css";
-import "@/assets/fonts/ERPyb/ERPyb.css";
-import AudioPlayer from "@/components/global/AudioPlayer";
+import MainLayout from '@/layouts/main/MainLayout';
+import dynamic from 'next/dynamic';
+import type { Metadata } from 'next';
+import AudioPlayer from '@/components/global/AudioPlayer';
+import '@/assets/css/main.css';
+
+const RsuiteProvider = dynamic(() => import('providers/RsuiteProvider'), { ssr: false });
+
 export const metadata: Metadata = {
-  title: "پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی",
-  description: "پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی",
+  title: 'پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی',
+  description: 'پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl">
-      <body className="sp-body">
-        <MainLayout>{children}</MainLayout>
-        <AudioPlayer />
+      <body>
+        <RsuiteProvider>
+          <MainLayout>{children}</MainLayout>
+          <AudioPlayer />
+        </RsuiteProvider>
       </body>
     </html>
   );

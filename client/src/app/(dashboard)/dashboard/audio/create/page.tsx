@@ -1,22 +1,28 @@
 'use client';
+
 import React, { useRef, useState } from 'react';
 import { Button, Form } from 'rsuite';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-//types
+
+// Types
 import { categoryType } from 'types/category.type';
-//model
+
+// Models
 import { createAudioModel } from 'models/createAudio.model';
-//services
+
+// Services
 import { uploadAudio } from 'services/audio/audioServices';
 import { allCategory } from 'services/category/categoryServices';
-//components
+
+// Components
 import DashboardPanel from '@/components/global/DashboardPanel';
 import TexAreaField from '@/components/global/fields/TexAreaField';
 import TextField from '@/components/global/fields/TextField';
 import UploadField from '@/components/global/fields/UploadField';
 import TagField from '@/components/global/fields/TagField';
 
+// Types
 export type AudioFormValue = {
   title: string;
   text?: string;
@@ -26,8 +32,7 @@ export type AudioFormValue = {
 };
 
 function CreateAudioPage() {
-  const { data, isLoading } = useQuery({ queryKey: ['allCategory'], queryFn: allCategory });
-
+  // ---------------------- State & References ----------------------
   const formRef = useRef<any>();
   const [formValue, setFormValue] = useState<AudioFormValue>({
     title: '',
@@ -37,7 +42,18 @@ function CreateAudioPage() {
     categories: [],
   });
 
-  const handleInputChange = (name: keyof AudioFormValue, value: string) => {
+  // ---------------------- Data Fetching ----------------------
+  const { data, isLoading } = useQuery({
+    queryKey: ['allCategory'],
+    queryFn: allCategory,
+  });
+
+  const { mutateAsync } = useMutation({
+    mutationFn: uploadAudio,
+  });
+
+  // ---------------------- Handlers ----------------------
+  const handleInputChange = (name: keyof AudioFormValue, value: string | categoryType[]) => {
     setFormValue((prev) => ({
       ...prev,
       [name]: value,
@@ -51,10 +67,6 @@ function CreateAudioPage() {
     }));
   };
 
-  const { mutateAsync } = useMutation({
-    mutationFn: uploadAudio,
-  });
-
   const handleSubmit = async () => {
     if (!formRef.current.check() || !formValue.file) {
       toast.error('لطفاً تمام فیلدهای ضروری را پر کنید');
@@ -65,16 +77,22 @@ function CreateAudioPage() {
       const formData = new FormData();
       formData.append('title', formValue.title);
       if (formValue.text) formData.append('text', formValue.text);
-      //@ts-ignore
-      if (formValue.categories) formData.append('categories', formValue.categories);
-      if (formValue.file)
+      if (formValue.categories) {
+        //@ts-ignore
+        formData.append('categories', formValue.categories);
+      }
+      if (formValue.file) {
         //@ts-ignore
         formData.append('file', formValue.file.blobFile);
-      if (formValue.poster)
+      }
+      if (formValue.poster) {
         //@ts-ignore
         formData.append('poster', formValue.poster.blobFile);
+      }
+
       const res = await mutateAsync(formData);
-      if (res?.status == 201) {
+
+      if (res?.status === 201) {
         toast.success('صوت ذخیره شد');
       } else {
         toast.error('صوت ذخیره نشد');
@@ -84,6 +102,7 @@ function CreateAudioPage() {
     }
   };
 
+  // ---------------------- Render ----------------------
   return (
     <DashboardPanel title="آپلود فایل صوتی">
       <Form model={createAudioModel} formValue={formValue} ref={formRef} fluid>
@@ -105,7 +124,7 @@ function CreateAudioPage() {
             name="categories"
             title="دسته‌بندی"
             value={formValue.categories}
-            onChange={(value: any) => handleInputChange('categories', value)}
+            onChange={(value: categoryType[]) => handleInputChange('categories', value)}
             loading={isLoading}
           />
 
@@ -123,18 +142,16 @@ function CreateAudioPage() {
             name="file"
             title="فایل صوتی"
             containerClassName="col-span-12"
-            //@ts-ignore
-            handleImageChange={(files) => handleFileChange('file', files)}
+            handleImageChange={(files: any) => handleFileChange('file', files)}
             fileList={formValue.file ? [formValue.file] : []}
             accept="audio/*"
           />
 
           <UploadField
             name="poster"
-            title="فایل تصویری"
+            title="فایل پوستر"
             containerClassName="col-span-12"
-            //@ts-ignore
-            handleImageChange={(files) => handleFileChange('poster', files)}
+            handleImageChange={(files: any) => handleFileChange('poster', files)}
             fileList={formValue.poster ? [formValue.poster] : []}
             accept="image/*"
           />
