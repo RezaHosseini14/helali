@@ -1,25 +1,26 @@
 'use client';
-import DashboardPanel from '@/components/global/DashboardPanel';
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Table } from 'rsuite';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
+import { Table } from 'rsuite';
 
-//Services
-import { allUser } from 'services/user/userServices';
+// Services
+import { deleteImage } from 'services/gallery/galleryServices';
 
 //Functions
-import { shamsi } from 'utils/functions';
+import { getFileSize, shamsi } from 'utils/functions';
 
 //Components
 import ConfirmModal from '@/components/global/ConfirmModal';
+import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
+import { allVideo } from 'services/video/videoServices';
 import TablePagination from '@/components/global/TablePagination';
 
 const { Column, HeaderCell, Cell } = Table;
 
-function UserPage() {
+function videosListsPage() {
   const router = useRouter();
 
   // ---------------------- State and Ref ----------------------
@@ -30,18 +31,18 @@ function UserPage() {
 
   // ---------------------- Data Fetching ----------------------
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['allUser', { page, limit }],
+    queryKey: ['allvideo', { page, limit }],
     queryFn: ({ queryKey }: { queryKey: [string, { page: number; limit: number }] }) => {
       const [, params] = queryKey;
-      return allUser(params.page, params.limit);
+      return allVideo(params.page, params.limit);
     },
   });
 
   // ---------------------- Mutations ----------------------
-  // const { mutateAsync, isPending } = useMutation({
-  //   mutationKey: ['deleteUser'],
-  //   mutationFn: (id: number) => deleteUser(id),
-  // });
+  const { mutateAsync, isPending } = useMutation({
+    mutationKey: ['deleteImage'],
+    mutationFn: (id: number) => deleteImage(id),
+  });
 
   // ---------------------- Event Handlers ----------------------
   const handleOpenConfirmModal = (id: number) => {
@@ -59,26 +60,26 @@ function UserPage() {
     setLimit(dataKey);
   };
 
-  // const handleDelete = async () => {
-  //   if (!selectedId) return;
-  //   try {
-  //     const res = await mutateAsync(selectedId);
-  //     if (res.status === 200) {
-  //       refetch();
-  //       toast.success('کاربر با موفقیت حذف شد');
-  //     } else {
-  //       toast.error('کاربر حذف نشد');
-  //     }
-  //   } catch (error) {
-  //     toast.error('خطا در حذف کاربر');
-  //   } finally {
-  //     closeConfirmModal();
-  //   }
-  // };
+  const handleDelete = async () => {
+    if (!selectedId) return;
+    try {
+      const res = await mutateAsync(selectedId);
+      if (res.status === 200) {
+        refetch();
+        toast.success('فایل تصویری با موفقیت حذف شد');
+      } else {
+        toast.error('فایل تصویری حذف نشد');
+      }
+    } catch (error) {
+      toast.error('فایل تصویری حذف نشد');
+    } finally {
+      handleCloseConfirmModal();
+    }
+  };
 
   // ---------------------- Rendering ----------------------
   return (
-    <DashboardPanel title="لیست کاربران">
+    <DashboardPanel title="لیست ویدیو‌ها">
       <TablePagination
         page={page}
         limit={limit}
@@ -86,48 +87,48 @@ function UserPage() {
         setPage={setPage}
         handleChangeLimit={handleChangeLimit}
       >
-        <Table bordered autoHeight data={data?.data?.users} loading={isLoading}>
+        <Table bordered autoHeight data={data?.data?.videos} loading={isLoading}>
           <Column width={60} align="center" fixed>
             <HeaderCell>شناسه</HeaderCell>
             <Cell dataKey="id" />
           </Column>
 
           <Column flexGrow={1} align="center" fixed>
-            <HeaderCell>نام‌کاربری</HeaderCell>
-            <Cell dataKey="username" />
-          </Column>
-
-          <Column flexGrow={1} align="center" fixed>
-            <HeaderCell>نام</HeaderCell>
-            <Cell dataKey="first_name" />
+            <HeaderCell>توضیحات</HeaderCell>
+            <Cell dataKey="text" />
           </Column>
 
           <Column flexGrow={1}>
-            <HeaderCell>نام خانوادگی</HeaderCell>
-            <Cell dataKey="last_name" />
+            <HeaderCell>نام فایل</HeaderCell>
+            <Cell dataKey="originalName" />
           </Column>
 
-          <Column flexGrow={1}>
-            <HeaderCell>شماره همراه</HeaderCell>
-            <Cell dataKey="phone_number" />
+          <Column width={100}>
+            <HeaderCell>نوع فایل</HeaderCell>
+            <Cell dataKey="mimetype" />
           </Column>
 
-          <Column flexGrow={1}>
-            <HeaderCell>سن</HeaderCell>
-            <Cell dataKey="age" />
+          <Column width={90}>
+            <HeaderCell>حجم</HeaderCell>
+            <Cell>{(rowData: any) => <span dir="ltr">{getFileSize(rowData.size)}</span>}</Cell>
           </Column>
 
-          <Column flexGrow={1}>
-            <HeaderCell>ایمیل</HeaderCell>
-            <Cell dataKey="email" />
+          <Column width={50}>
+            <HeaderCell>لایک</HeaderCell>
+            <Cell dataKey="like" />
           </Column>
 
-          <Column flexGrow={1}>
+          <Column width={50}>
+            <HeaderCell>بازدید</HeaderCell>
+            <Cell dataKey="view" />
+          </Column>
+
+          <Column width={100}>
             <HeaderCell>تاریخ ایجاد</HeaderCell>
             <Cell>{(rowData: any) => <span>{shamsi(rowData.created_at, 'YYYY/MM/DD')}</span>}</Cell>
           </Column>
 
-          <Column width={80} fixed="right">
+          <Column width={85} fixed="right">
             <HeaderCell> </HeaderCell>
             <Cell>
               {(rowData) => (
@@ -135,14 +136,14 @@ function UserPage() {
                   <IconButton
                     className="update-btn"
                     icon="ki-solid ki-pencil"
-                    onClick={() => router.replace(`/dashboard/user/update/${rowData.id}`)}
+                    onClick={() => router.replace(`/dashboard/gallery/update/${rowData.id}`)}
                     tooltipText="بروزرسانی"
                   />
                   <IconButton
                     className="trash-btn"
                     icon="ki-solid ki-trash"
                     onClick={() => handleOpenConfirmModal(rowData.id)}
-                    tooltipText="حذف کاربر"
+                    tooltipText="حذف فایل ویدیویی"
                   />
                 </div>
               )}
@@ -150,18 +151,18 @@ function UserPage() {
           </Column>
         </Table>
       </TablePagination>
-      {/* <ConfirmModal
+      <ConfirmModal
         open={showConfirm}
-        onClose={closeConfirmModal}
+        onClose={handleCloseConfirmModal}
         title="تأیید حذف"
-        message="آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟"
-        closeConfirmModal={closeConfirmModal}
+        message="آیا مطمئن هستید که می‌خواهید این فایل تصویری را حذف کنید؟"
+        closeConfirmModal={handleCloseConfirmModal}
         loading={isPending}
         confirmMsg="حذف"
         handleDelete={handleDelete}
-      /> */}
+      />
     </DashboardPanel>
   );
 }
 
-export default UserPage;
+export default videosListsPage;

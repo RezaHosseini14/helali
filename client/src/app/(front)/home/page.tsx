@@ -64,7 +64,7 @@ function HomePage(): JSX.Element {
           <div className="donate-box col-span-3">
             <DonateBox />
           </div>
-          
+
           <div className="videos-box col-span-9">
             <VideosBox videos={videosData?.data?.videos} />
           </div>

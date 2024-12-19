@@ -33,9 +33,9 @@ function Header() {
   };
   return (
     <div className="flex items-center justify-between w-full">
-      <div className="flex items-center gap-4 text-white text-2xl">
-        <i className="ki-solid ki-burger-menu-5 cursor-pointer" onClick={handleToggleSidebar}></i>
-        <h1>سامانه</h1>
+      <div className="flex items-center gap-4 text-white">
+        <i className="ki-solid ki-burger-menu-5 cursor-pointer text-2xl" onClick={handleToggleSidebar}></i>
+        <h1>پایگاه حفظ و نشر آثار هلالی </h1>
       </div>
       <div className="flex items-center gap-4">
         <button className="dashboard-header-item" onClick={handleToggleDarkMode}>

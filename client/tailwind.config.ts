@@ -7,21 +7,20 @@ const config: Config = {
     // './src/app/**/*.{js,ts,jsx,tsx,mdx}',
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  darkMode: 'class', // تنظیم حالت دارک مود (با استفاده از کلاس 'dark')
+  darkMode: 'class',
 
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
+        mainbackground: 'var(mainbackground)',
+        dashboardbackground: 'rgb(var(--background))',
         foreground: 'var(--foreground)',
         mainColor: '#1f3835',
         //new
         mainstructure: 'rgb(var(--mainstructure))',
         maincolor: 'var(--maincolor)',
-        // mainColor: '#091a28',
-
-        // mainColor: var(--mainColor)
       },
+
       container: {
         center: true,
         padding: {

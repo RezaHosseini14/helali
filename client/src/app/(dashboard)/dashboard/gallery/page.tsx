@@ -1,34 +1,63 @@
 'use client';
-import DashboardPanel from '@/components/global/DashboardPanel';
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 import { Table } from 'rsuite';
+
+// Services
 import { deleteImage } from 'services/gallery/galleryServices';
 import { allImage } from 'services/image/imageServices';
+
+//Functions
 import { getFileSize } from 'utils/functions';
+
+//Components
 import ConfirmModal from '@/components/global/ConfirmModal';
+import DashboardPanel from '@/components/global/DashboardPanel';
+import IconButton from '@/components/global/IconButton';
+import TablePagination from '@/components/global/TablePagination';
 
 const { Column, HeaderCell, Cell } = Table;
 
-function GalleryPage() {
-  const { data, isLoading, refetch } = useQuery({ queryKey: ['allImage'], queryFn: allImage });
+function GalleriesListsPage() {
+  const router = useRouter();
+
+  // ---------------------- State and Ref ----------------------
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [limit, setLimit] = useState<number>(10);
+  const [page, setPage] = useState<number>(1);
+
+  // ---------------------- Data Fetching ----------------------
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['allImage', { page, limit }],
+    queryFn: ({ queryKey }: { queryKey: [string, { page: number; limit: number }] }) => {
+      const [, params] = queryKey;
+      return allImage(params.page, params.limit);
+    },
+  });
+
+  // ---------------------- Mutations ----------------------
   const { mutateAsync, isPending } = useMutation({
     mutationKey: ['deleteImage'],
     mutationFn: (id: number) => deleteImage(id),
   });
 
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-
-  const openConfirmModal = (id: number) => {
+  // ---------------------- Event Handlers ----------------------
+  const handleOpenConfirmModal = (id: number) => {
     setSelectedId(id);
     setShowConfirm(true);
   };
 
-  const closeConfirmModal = () => {
+  const handleCloseConfirmModal = () => {
     setSelectedId(null);
     setShowConfirm(false);
+  };
+
+  const handleChangeLimit = (dataKey: any) => {
+    setPage(1);
+    setLimit(dataKey);
   };
 
   const handleDelete = async () => {
@@ -44,69 +73,85 @@ function GalleryPage() {
     } catch (error) {
       toast.error('فایل تصویری حذف نشد');
     } finally {
-      closeConfirmModal();
+      handleCloseConfirmModal();
     }
   };
 
+  // ---------------------- Rendering ----------------------
   return (
     <DashboardPanel title="لیست تصاویر">
-      <Table bordered autoHeight data={data?.data?.images} loading={isLoading}>
-        <Column width={60} align="center" fixed>
-          <HeaderCell>شناسه</HeaderCell>
-          <Cell dataKey="id" />
-        </Column>
+      <TablePagination
+        page={page}
+        limit={limit}
+        total={data?.data?.total}
+        setPage={setPage}
+        handleChangeLimit={handleChangeLimit}
+      >
+        <Table bordered autoHeight data={data?.data?.images} loading={isLoading}>
+          <Column width={60} align="center" fixed>
+            <HeaderCell>شناسه</HeaderCell>
+            <Cell dataKey="id" />
+          </Column>
 
-        <Column flexGrow={1} align="center" fixed>
-          <HeaderCell>توضیحات</HeaderCell>
-          <Cell dataKey="desc" />
-        </Column>
+          <Column flexGrow={1} align="center" fixed>
+            <HeaderCell>توضیحات</HeaderCell>
+            <Cell dataKey="desc" />
+          </Column>
 
-        <Column flexGrow={1}>
-          <HeaderCell>نام فایل</HeaderCell>
-          <Cell dataKey="originalName" />
-        </Column>
+          <Column flexGrow={1}>
+            <HeaderCell>نام فایل</HeaderCell>
+            <Cell dataKey="originalName" />
+          </Column>
 
-        <Column flexGrow={1}>
-          <HeaderCell>نوع فایل</HeaderCell>
-          <Cell dataKey="mimetype" />
-        </Column>
+          <Column width={100}>
+            <HeaderCell>نوع فایل</HeaderCell>
+            <Cell dataKey="mimetype" />
+          </Column>
 
-        <Column flexGrow={1}>
-          <HeaderCell>حجم</HeaderCell>
-          <Cell>{(rowData: any) => <span dir="ltr">{getFileSize(rowData.size)}</span>}</Cell>
-        </Column>
+          <Column width={90}>
+            <HeaderCell>حجم</HeaderCell>
+            <Cell>{(rowData: any) => <span dir="ltr">{getFileSize(rowData.size)}</span>}</Cell>
+          </Column>
 
-        <Column width={70}>
-          <HeaderCell>لایک</HeaderCell>
-          <Cell dataKey="like" />
-        </Column>
+          <Column width={50}>
+            <HeaderCell>لایک</HeaderCell>
+            <Cell dataKey="like" />
+          </Column>
 
-        <Column width={70}>
-          <HeaderCell>بازدید</HeaderCell>
-          <Cell dataKey="view" />
-        </Column>
+          <Column width={50}>
+            <HeaderCell>بازدید</HeaderCell>
+            <Cell dataKey="view" />
+          </Column>
 
-        <Column width={80} fixed="right">
-          <HeaderCell> </HeaderCell>
-          <Cell>
-            {(rowData) => (
-              <div className="grid place-content-center">
-                <i
-                  className="ki-solid ki-trash cursor-pointer text-red-500 w-fit"
-                  onClick={() => openConfirmModal(rowData.id)}
-                ></i>
-              </div>
-            )}
-          </Cell>
-        </Column>
-      </Table>
-
+          <Column width={85} fixed="right">
+            <HeaderCell> </HeaderCell>
+            <Cell>
+              {(rowData) => (
+                <div className="flex items-center gap-2">
+                  <IconButton
+                    className="update-btn"
+                    icon="ki-solid ki-pencil"
+                    onClick={() => router.replace(`/dashboard/gallery/update/${rowData.id}`)}
+                    tooltipText="بروزرسانی"
+                  />
+                  <IconButton
+                    className="trash-btn"
+                    icon="ki-solid ki-trash"
+                    onClick={() => handleOpenConfirmModal(rowData.id)}
+                    tooltipText="حذف فایل تصویری"
+                  />
+                </div>
+              )}
+            </Cell>
+          </Column>
+        </Table>
+      </TablePagination>
       <ConfirmModal
         open={showConfirm}
-        onClose={closeConfirmModal}
+        onClose={handleCloseConfirmModal}
         title="تأیید حذف"
         message="آیا مطمئن هستید که می‌خواهید این فایل تصویری را حذف کنید؟"
-        closeConfirmModal={closeConfirmModal}
+        closeConfirmModal={handleCloseConfirmModal}
         loading={isPending}
         confirmMsg="حذف"
         handleDelete={handleDelete}
@@ -115,4 +160,4 @@ function GalleryPage() {
   );
 }
 
-export default GalleryPage;
+export default GalleriesListsPage;

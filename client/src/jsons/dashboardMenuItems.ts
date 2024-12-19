@@ -43,12 +43,12 @@ export const dashboardMenuItems: dashboardMenuItemsType[] = [
   {
     title: 'ویدیو',
     url: '/',
-    icon: 'picture',
+    icon: 'abstract-31',
     children: [
       {
         title: 'لیست ویدیو',
         url: '/dashboard/video',
-        icon: 'picture',
+        icon: 'abstract-31',
       },
       {
         title: 'ایجاد ویدیو',
@@ -70,6 +70,23 @@ export const dashboardMenuItems: dashboardMenuItemsType[] = [
       {
         title: 'ایجاد تصویر',
         url: '/dashboard/gallery/create',
+        icon: 'plus-square',
+      },
+    ],
+  },
+  {
+    title: 'دسته‌بندی',
+    url: '/category',
+    icon: 'lots-shopping',
+    children: [
+      {
+        title: 'لیست دسته‌بندی',
+        url: '/dashboard/category',
+        icon: 'lots-shopping',
+      },
+      {
+        title: 'ایجاد دسته‌بندی',
+        url: '/dashboard/category/create',
         icon: 'plus-square',
       },
     ],

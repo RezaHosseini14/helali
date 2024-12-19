@@ -20,6 +20,12 @@
   .remove-btn {
     @apply absolute left-2 top-2 text-red-500 z-10 text-2xl bg-red-700/30 backdrop-blur-lg rounded-full shadow-lg;
   }
+  .trash-btn {
+    @apply grid place-content-center cursor-pointer bg-red-700/30 text-red-500 backdrop-blur-lg size-6 rounded-lg;
+  }
+  .update-btn {
+    @apply grid place-content-center cursor-pointer bg-blue-700/30 text-blue-500 backdrop-blur-lg size-6 rounded-lg;
+  }
 }
 
 :root {
