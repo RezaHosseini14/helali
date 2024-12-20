@@ -1,3 +1,4 @@
+import { RegisterFormValue } from 'app/(dashboard)/dashboard/user/create/page';
 import http from '../httpService';
 type loginDataType = {
   username: string;
@@ -11,4 +12,8 @@ export function logout() {
 }
 export function verify() {
   return http.get('/auth/verifylogin');
+}
+
+export function registerUser(data: RegisterFormValue) {
+  return http.post('/auth/register', data);
 }

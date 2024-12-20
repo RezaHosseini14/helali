@@ -1,29 +1,27 @@
 'use client';
-import DashboardPanel from '@/components/global/DashboardPanel';
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Table } from 'rsuite';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
+import { Table } from 'rsuite';
 
-//Services
-import { allUser, deleteUser } from 'services/user/userServices';
+// Services
+import { deleteCategory } from 'services/category/categoryServices';
+import { allCategory } from 'services/category/categoryServices';
 
 //Functions
-import { shamsi } from 'utils/functions';
+import { getFileSize } from 'utils/functions';
 
 //Components
 import ConfirmModal from '@/components/global/ConfirmModal';
+import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import TablePagination from '@/components/global/TablePagination';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
 
 const { Column, HeaderCell, Cell } = Table;
 
-function UserPage() {
+function categoriesListsPage() {
   const router = useRouter();
-  const { user } = useSelector((state: RootState) => state.user);
 
   // ---------------------- State and Ref ----------------------
   const [showConfirm, setShowConfirm] = useState(false);
@@ -33,17 +31,17 @@ function UserPage() {
 
   // ---------------------- Data Fetching ----------------------
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['allUser', { page, limit }],
+    queryKey: ['allCategory', { page, limit }],
     queryFn: ({ queryKey }: { queryKey: [string, { page: number; limit: number }] }) => {
       const [, params] = queryKey;
-      return allUser(params.page, params.limit);
+      return allCategory(params.page, params.limit);
     },
   });
 
   // ---------------------- Mutations ----------------------
   const { mutateAsync, isPending } = useMutation({
-    mutationKey: ['deleteUser'],
-    mutationFn: (id: number) => deleteUser(id),
+    mutationKey: ['deleteCategory'],
+    mutationFn: (id: number) => deleteCategory(id),
   });
 
   // ---------------------- Event Handlers ----------------------
@@ -68,12 +66,12 @@ function UserPage() {
       const res = await mutateAsync(selectedId);
       if (res.status === 200) {
         refetch();
-        toast.success('کاربر با موفقیت حذف شد');
+        toast.success('فایل تصویری با موفقیت حذف شد');
       } else {
-        toast.error('کاربر حذف نشد');
+        toast.error('فایل تصویری حذف نشد');
       }
     } catch (error) {
-      toast.error('خطا در حذف کاربر');
+      toast.error('فایل تصویری حذف نشد');
     } finally {
       handleCloseConfirmModal();
     }
@@ -81,7 +79,7 @@ function UserPage() {
 
   // ---------------------- Rendering ----------------------
   return (
-    <DashboardPanel title="لیست کاربران">
+    <DashboardPanel title="لیست دسته‌بندی">
       <TablePagination
         page={page}
         limit={limit}
@@ -89,48 +87,23 @@ function UserPage() {
         setPage={setPage}
         handleChangeLimit={handleChangeLimit}
       >
-        <Table bordered autoHeight data={data?.data?.users} loading={isLoading}>
-          <Column width={60} align="center" fixed>
+        <Table bordered autoHeight data={data?.data?.categories} loading={isLoading}>
+          <Column width={60} align="center">
             <HeaderCell>شناسه</HeaderCell>
             <Cell dataKey="id" />
           </Column>
 
-          <Column flexGrow={1} align="center" fixed>
-            <HeaderCell>نام‌کاربری</HeaderCell>
-            <Cell dataKey="username" />
+          <Column flexGrow={1} align="center">
+            <HeaderCell>عنوان</HeaderCell>
+            <Cell dataKey="title" />
           </Column>
 
-          <Column flexGrow={1} align="center" fixed>
-            <HeaderCell>نام</HeaderCell>
-            <Cell dataKey="first_name" />
+          <Column flexGrow={1} align="center">
+            <HeaderCell>چیدمان</HeaderCell>
+            <Cell dataKey="sort" />
           </Column>
 
-          <Column flexGrow={1}>
-            <HeaderCell>نام خانوادگی</HeaderCell>
-            <Cell dataKey="last_name" />
-          </Column>
-
-          <Column flexGrow={1}>
-            <HeaderCell>شماره همراه</HeaderCell>
-            <Cell dataKey="phone_number" />
-          </Column>
-
-          <Column flexGrow={1}>
-            <HeaderCell>سن</HeaderCell>
-            <Cell dataKey="age" />
-          </Column>
-
-          <Column flexGrow={1}>
-            <HeaderCell>ایمیل</HeaderCell>
-            <Cell dataKey="email" />
-          </Column>
-
-          <Column flexGrow={1}>
-            <HeaderCell>تاریخ ایجاد</HeaderCell>
-            <Cell>{(rowData: any) => <span>{shamsi(rowData.created_at, 'YYYY/MM/DD')}</span>}</Cell>
-          </Column>
-
-          <Column width={80} fixed="right">
+          <Column width={85}>
             <HeaderCell> </HeaderCell>
             <Cell>
               {(rowData) => (
@@ -138,17 +111,15 @@ function UserPage() {
                   <IconButton
                     className="update-btn"
                     icon="ki-solid ki-pencil"
-                    onClick={() => router.replace(`/dashboard/user/update/${rowData.id}`)}
+                    onClick={() => router.replace(`/dashboard/category/update/${rowData.id}`)}
                     tooltipText="بروزرسانی"
                   />
-                  {user.username === rowData.username ? null : (
-                    <IconButton
-                      className="trash-btn"
-                      icon="ki-solid ki-trash"
-                      onClick={() => handleOpenConfirmModal(rowData.id)}
-                      tooltipText="حذف کاربر"
-                    />
-                  )}
+                  <IconButton
+                    className="trash-btn"
+                    icon="ki-solid ki-trash"
+                    onClick={() => handleOpenConfirmModal(rowData.id)}
+                    tooltipText="حذف دسته‌بندی"
+                  />
                 </div>
               )}
             </Cell>
@@ -159,7 +130,7 @@ function UserPage() {
         open={showConfirm}
         onClose={handleCloseConfirmModal}
         title="تأیید حذف"
-        message="آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟"
+        message="آیا مطمئن هستید که می‌خواهید این دسته‌بندی را حذف کنید؟"
         closeConfirmModal={handleCloseConfirmModal}
         loading={isPending}
         confirmMsg="حذف"
@@ -169,4 +140,4 @@ function UserPage() {
   );
 }
 
-export default UserPage;
+export default categoriesListsPage;

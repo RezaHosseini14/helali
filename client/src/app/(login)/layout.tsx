@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "../../globals.css";
+import "../globals.css";
 import "@/assets/css/style.css";
 import "@/assets/fonts/keenicons/icon.css";
 import "@/assets/fonts/ERPyb/ERPyb.css";

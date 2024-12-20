@@ -16,3 +16,7 @@ export function allUser(page?: number, limit?: number) {
 
   return http.get(url);
 }
+
+export function deleteUser(id: number) {
+  return http.delete(`/user/${id}`);
+}
