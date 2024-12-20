@@ -3,6 +3,7 @@ import { VideoService } from './video.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { Pagination } from 'src/common/decorator/pagination.decorator';
 
 @Controller('video')
 export class VideoController {
@@ -33,8 +34,9 @@ export class VideoController {
   }
 
   @Get()
-  findAllVideos() {
-    return this.videoService.findAllVideos();
+  findAllVideos(@Pagination() pagination: { page: number; limit: number }) {
+    const { page, limit } = pagination;
+    return this.videoService.findAllVideos(page, limit);
   }
 
   @Get(':id')

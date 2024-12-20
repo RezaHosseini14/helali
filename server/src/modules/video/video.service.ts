@@ -79,12 +79,14 @@ export class VideoService {
     }
   }
 
-  async findAllVideos() {
+  async findAllVideos(page: number, limit: number) {
     try {
-      const videos = await this.videoRepository.find({
+      const [videos, total] = await this.videoRepository.findAndCount({
         order: {
           title: 'DESC',
         },
+        skip: (page - 1) * limit,
+        take: limit,
       });
 
       if (videos.length <= 0) {
@@ -92,7 +94,10 @@ export class VideoService {
       }
 
       return {
-        videos: videos,
+        videos,
+        total,
+        page,
+        lastPage: Math.ceil(total / limit),
         statusCode: HttpStatus.ACCEPTED,
       };
     } catch (error) {

@@ -1,3 +1,4 @@
+import { CategoryFormValue } from '@/components/pages/dashboard/category/createCategory.modal';
 import http from '../httpService';
 
 // export function allCategory() {
@@ -23,4 +24,8 @@ export function allCategory(page?: number, limit?: number) {
 
 export function deleteCategory(id: number) {
   return http.delete(`/category/${id}`);
+}
+
+export function createCategory(data: CategoryFormValue) {
+  return http.post('/category', data);
 }

@@ -14,26 +14,30 @@ export class UserService {
     private userRepository: Repository<UserEntity>,
   ) {}
 
-  async findAll(page, limit) {
+  async findAll(limit: number, page: number) {
     try {
-      // const pageDefault: number = page || 1;
-      // const limitDefault: number = limit || 10;
-      // const totalUsers: number = await this.userModel.countDocuments();
-      // const skip: number = (pageDefault - 1) * limitDefault;
-      // const users: any[] = await this.userRepository.find().skip(skip).limit(limit);
+      const [users, total] = await this.userRepository
+        .createQueryBuilder('user')
+        .orderBy('user.id', 'DESC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
 
-      const users = await this.userRepository.find();
       if (users.length <= 0) {
         throw new HttpException('کاربری یافت نشد', HttpStatus.NOT_FOUND);
       }
 
       return {
         users,
-        // currentPage: page,
-        // totalPages: Math.ceil(totalUsers / limit),
-        // total: totalUsers,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        statusCode: HttpStatus.OK,
       };
-    } catch (error) {}
+    } catch (error) {
+      console.error('خطا در دریافت کاربران:', error);
+      throw new HttpException('مشکلی در دریافت کاربران رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async findOne(id: string) {
@@ -70,13 +74,25 @@ export class UserService {
     }
   }
 
-  async remove(id: string) {
+  async remove(id: number, req: Request) {
     try {
-      // await this.findOne(id);
-      // const deleteUser = await this.userModel.deleteOne({ _id: id });
-      // if (deleteUser.deletedCount == 0)
-      //   throw new HttpException('کاربر حذف نشد', HttpStatus.BAD_REQUEST);
-      // return new HttpException('کاربر مورد نظر حذف شد', HttpStatus.ACCEPTED);
+      //@ts-ignore
+      if (req.user.userId === id) {
+        throw new HttpException('نمی تواندی خودتان را حذف کنید', HttpStatus.BAD_REQUEST);
+      }
+
+      const user = await this.userRepository.findOne({
+        where: { id },
+      });
+
+      if (!user) {
+        throw new HttpException('کاربر موردنظر یافت نشد', HttpStatus.NOT_FOUND);
+      }
+      await this.userRepository.delete(id);
+      return {
+        message: 'کاربر حذف شد',
+        statusCode: HttpStatus.OK,
+      };
     } catch (error) {
       throw error;
     }

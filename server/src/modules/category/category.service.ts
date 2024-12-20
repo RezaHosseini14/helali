@@ -47,22 +47,30 @@ export class CategoryService {
     }
   }
 
-  async findAll() {
+  async findAll(limit: number, page: number) {
     try {
-      const categories = await this.categoryRepository.find({
-        order: {
-          sort: 'ASC',
-        },
-      });
+      const [categories, total] = await this.categoryRepository
+        .createQueryBuilder('category')
+        .orderBy('category.sort', 'ASC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
+
       if (categories.length <= 0) {
         throw new HttpException('دسته‌بندی یافت نشد', HttpStatus.NOT_FOUND);
       }
 
       return {
         categories,
-        statusCode: HttpStatus.ACCEPTED,
+        total, // تعداد کل دسته‌بندی‌ها
+        currentPage: page, // صفحه فعلی
+        totalPages: Math.ceil(total / limit), // تعداد کل صفحات
+        statusCode: HttpStatus.OK,
       };
-    } catch (error) {}
+    } catch (error) {
+      console.error('خطا در دریافت دسته‌بندی‌ها:', error);
+      throw new HttpException('مشکلی در دریافت دسته‌بندی‌ها رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async findOne(id: number) {

@@ -134,13 +134,15 @@ export class AudioService {
     };
   }
 
-  async findAllAudios() {
+  async findAllAudios(limit: number, page: number) {
     try {
-      const audios = await this.audioRepository
+      const [audios, total] = await this.audioRepository
         .createQueryBuilder('audio')
         .leftJoinAndSelect('audio.categories', 'category')
         .orderBy('audio.title', 'DESC')
-        .getMany();
+        .skip((page - 1) * limit) // محاسبه شروع رکوردها
+        .take(limit) // تعداد رکوردها در هر صفحه
+        .getManyAndCount(); // گرفتن لیست و تعداد کل رکوردها
 
       if (audios.length <= 0) {
         throw new HttpException('فایلی یافت نشد', HttpStatus.NOT_FOUND);
@@ -153,6 +155,9 @@ export class AudioService {
 
       return {
         audios: audiosWithCategoryIds,
+        total, // تعداد کل رکوردها
+        currentPage: page, // صفحه فعلی
+        totalPages: Math.ceil(total / limit), // تعداد کل صفحات
         statusCode: HttpStatus.ACCEPTED,
       };
     } catch (error) {

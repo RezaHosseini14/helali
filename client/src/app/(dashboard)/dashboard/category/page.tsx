@@ -3,31 +3,38 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { Table } from 'rsuite';
+import { Button, Table } from 'rsuite';
 
 // Services
-import { deleteCategory } from 'services/category/categoryServices';
-import { allCategory } from 'services/category/categoryServices';
+import { deleteCategory, allCategory } from 'services/category/categoryServices';
 
-//Functions
-import { getFileSize } from 'utils/functions';
-
-//Components
+// Components
 import ConfirmModal from '@/components/global/ConfirmModal';
 import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import TablePagination from '@/components/global/TablePagination';
+import CreateCategoryModal from '@/components/pages/dashboard/category/createCategory.modal';
 
 const { Column, HeaderCell, Cell } = Table;
 
-function categoriesListsPage() {
+function CategoriesListsPage() {
   const router = useRouter();
 
   // ---------------------- State and Ref ----------------------
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showConfirm, setShowConfirm] = useState<boolean>(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
+
+  const [showCreateCategory, setShowCreateCategory] = useState<boolean>(false);
+
+  const handleOpenCreateCategoryModal = () => {
+    setShowCreateCategory(true);
+  };
+
+  const handleCloseCreateCategoryModal = () => {
+    setShowCreateCategory(false);
+  };
 
   // ---------------------- Data Fetching ----------------------
   const { data, isLoading, refetch } = useQuery({
@@ -66,12 +73,12 @@ function categoriesListsPage() {
       const res = await mutateAsync(selectedId);
       if (res.status === 200) {
         refetch();
-        toast.success('فایل تصویری با موفقیت حذف شد');
+        toast.success('دسته‌بندی با موفقیت حذف شد');
       } else {
-        toast.error('فایل تصویری حذف نشد');
+        toast.error('حذف دسته‌بندی موفقیت‌آمیز نبود');
       }
     } catch (error) {
-      toast.error('فایل تصویری حذف نشد');
+      toast.error('حذف دسته‌بندی موفقیت‌آمیز نبود');
     } finally {
       handleCloseConfirmModal();
     }
@@ -79,7 +86,16 @@ function categoriesListsPage() {
 
   // ---------------------- Rendering ----------------------
   return (
-    <DashboardPanel title="لیست دسته‌بندی">
+    <DashboardPanel
+      title="لیست دسته‌بندی"
+      buttons={[
+        {
+          icon: 'ki-solid ki-plus-square',
+          title: 'ایجاد دسته‌بندی',
+          onClick: handleOpenCreateCategoryModal,
+        },
+      ]}
+    >
       <TablePagination
         page={page}
         limit={limit}
@@ -126,6 +142,7 @@ function categoriesListsPage() {
           </Column>
         </Table>
       </TablePagination>
+
       <ConfirmModal
         open={showConfirm}
         onClose={handleCloseConfirmModal}
@@ -136,8 +153,18 @@ function categoriesListsPage() {
         confirmMsg="حذف"
         handleDelete={handleDelete}
       />
+
+      <CreateCategoryModal
+        open={showCreateCategory}
+        onClose={handleCloseCreateCategoryModal}
+        closeModal={handleCloseCreateCategoryModal}
+        message="لطفاً اطلاعات دسته‌بندی را وارد کنید"
+        title="ایجاد دسته‌بندی جدید"
+        confirmMsg="ثبت"
+        refetch={refetch}
+      />
     </DashboardPanel>
   );
 }
 
-export default categoriesListsPage;
+export default CategoriesListsPage;

@@ -3,6 +3,7 @@ import { GalleryService } from './gallery.service';
 import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { Pagination } from 'src/common/decorator/pagination.decorator';
 
 @Controller('gallery')
 @ApiTags('Gallery') // Swagger category name
@@ -37,25 +38,34 @@ export class GalleryController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Retrieve a list of images in the gallery' })
+  @ApiOperation({ summary: 'Retrieve a paginated list of images in the gallery' })
   @ApiResponse({
     status: 200,
-    description: 'Image list retrieved successfully',
+    description: 'Paginated image list retrieved successfully',
     schema: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          id: { type: 'number', example: 1 },
-          path: { type: 'string', example: 'http://example.com/image.jpg' },
-          desc: { type: 'string', example: 'A beautiful image' },
-          like: { type: 'number', example: 42 },
+      type: 'object',
+      properties: {
+        images: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'number', example: 1 },
+              path: { type: 'string', example: 'http://example.com/image.jpg' },
+              desc: { type: 'string', example: 'A beautiful image' },
+              like: { type: 'number', example: 42 },
+            },
+          },
         },
+        total: { type: 'number', example: 100 },
+        currentPage: { type: 'number', example: 1 },
+        totalPages: { type: 'number', example: 10 },
       },
     },
   })
-  findAll() {
-    return this.galleryService.findAllImages();
+  async findAll(@Pagination() pagination: { limit: number; page: number }) {
+    const { limit, page } = pagination;
+    return await this.galleryService.findAllImages(limit, page);
   }
 
   @Patch('like/:id')

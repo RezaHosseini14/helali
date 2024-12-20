@@ -44,10 +44,10 @@ function Sidebar() {
   return (
     <div
       className={`bg-mainstructure ${
-        sidebarStatus ? 'w-80' : 'w-24'
+        sidebarStatus ? 'w-64' : 'w-16'
       } fixed start-8 top-8 bottom-8 rounded-xl flex gap-1 transition-all duration-500`}
     >
-      <div className="py-8 w-24 flex flex-col gap-8 items-center">
+      <div className="py-8 w-16 flex flex-col gap-8 items-center">
         {dashboardMenuItems.map((item, index) => (
           <Whisper
             key={index}
@@ -71,7 +71,7 @@ function Sidebar() {
       {/* Children Menu */}
       <div
         className={`py-4 border-s border-gray-600 transition-all duration-200 ease-in-out ${
-          sidebarStatus ? 'opacity-100 visible delay-300 w-56 px-2' : 'opacity-0 invisible !w-0 !p-0 delay-100'
+          sidebarStatus ? 'opacity-100 visible delay-300 w-48 px-2' : 'opacity-0 invisible !w-0 !p-0 delay-100'
         }`}
       >
         {dashboardMenuItems[MenueItemActive]?.children ? (
@@ -91,7 +91,7 @@ function Sidebar() {
                   }`}
                 >
                   <i className={`ki-solid ki-${child.icon} text-xl`}></i>
-                  <span className="text-lg">{child.title}</span>
+                  <span className="text-base">{child.title}</span>
                 </Link>
               </li>
             ))}

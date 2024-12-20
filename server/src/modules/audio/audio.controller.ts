@@ -16,6 +16,7 @@ import { AudioService } from './audio.service';
 import { ApiBody, ApiConsumes, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateAudioDto } from './dto/create-audio.dto';
 import { UpdateAudioDto } from './dto/update-audio.dto';
+import { Pagination } from 'src/common/decorator/pagination.decorator';
 
 @Controller('audio')
 @ApiTags('audio')
@@ -90,9 +91,10 @@ export class AudioController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List all audio files' })
-  async findAll() {
-    return await this.audioService.findAllAudios();
+  @ApiOperation({ summary: 'List all audio files with pagination' })
+  async findAll(@Pagination() pagination: { limit: number; page: number }) {
+    const { limit, page } = pagination;
+    return await this.audioService.findAllAudios(limit, page);
   }
 
   @Patch('like/:id')
@@ -175,8 +177,6 @@ export class AudioController {
       poster?: Express.Multer.File[];
     },
   ) {
-    console.log(updateAudioDto);
-    
     const audioFile = files.file?.[0];
     const posterFile = files.poster?.[0];
 

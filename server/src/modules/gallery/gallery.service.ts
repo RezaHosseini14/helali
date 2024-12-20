@@ -47,17 +47,30 @@ export class GalleryService {
     }
   }
 
-  async findAllImages() {
+  async findAllImages(limit: number, page: number) {
     try {
-      const images = await this.galleryRepository.find();
+      const [images, total] = await this.galleryRepository
+        .createQueryBuilder('image')
+        .orderBy('image.id', 'DESC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
+
       if (images.length <= 0) {
         throw new HttpException('تصویری یافت نشد', HttpStatus.NOT_FOUND);
       }
+
       return {
         images,
-        statusCode: HttpStatus.CREATED,
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        statusCode: HttpStatus.OK,
       };
-    } catch (error) {}
+    } catch (error) {
+      console.error('خطا در دریافت تصاویر:', error);
+      throw new HttpException('مشکلی در دریافت تصاویر رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async likeImage(id: number) {

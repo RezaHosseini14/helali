@@ -1,0 +1,111 @@
+'use client';
+
+import { useRef, useState } from 'react';
+import { Button, Form, Modal } from 'rsuite';
+import { useMutation } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
+
+// Services
+import { createCategory } from 'services/category/categoryServices';
+
+// Components
+import TextField from '@/components/global/fields/TextField';
+
+type createCategoryPropsType = {
+  open: boolean;
+  onClose: () => void;
+  closeModal: () => void;
+  loading?: boolean;
+  message: string;
+  title: string;
+  confirmMsg: string;
+  refetch: any;
+};
+
+export type CategoryFormValue = {
+  title: string;
+  sort: number;
+};
+
+function createCategoryModal(props: createCategoryPropsType) {
+  const formRef = useRef<any>();
+  const [formValue, setFormValue] = useState<CategoryFormValue>({
+    title: '',
+    sort: 0,
+  });
+
+  // ---------------------- Data Fetching ----------------------
+  const { mutateAsync } = useMutation({
+    mutationFn: createCategory,
+  });
+
+  // ---------------------- Handlers ----------------------
+  const handleInputChange = (name: keyof CategoryFormValue, value: string | number) => {
+    if (name === 'sort' && value !== '') {
+      value = Number(value);
+    }
+    setFormValue((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (!formRef.current.check()) {
+      toast.error('لطفاً تمام فیلدهای ضروری را پر کنید');
+      return;
+    }
+
+    try {
+      const res = await mutateAsync(formValue);
+
+      if (res?.status === 201) {
+        toast.success('دسته‌بندی با موفقیت ایجاد شد');
+        props.refetch();
+      } else {
+        toast.error('ایجاد دسته‌بندی با مشکل مواجه شد');
+      }
+    } catch (error) {
+      toast.error('ایجاد دسته‌بندی با مشکل مواجه شد');
+    }
+  };
+
+  // ---------------------- Render ----------------------
+  return (
+    <Modal open={props.open} onClose={props.onClose} size="xs">
+      <Modal.Header>
+        <Modal.Title>{props.title}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <Form formValue={formValue} ref={formRef} fluid>
+          <TextField
+            name="title"
+            title="عنوان"
+            containerClassName="col-span-6"
+            value={formValue.title}
+            onChange={(value: string) => handleInputChange('title', value)}
+          />
+
+          <TextField
+            name="sort"
+            title="ترتیب"
+            containerClassName="col-span-6"
+            value={formValue.sort}
+            onChange={(value: string) => handleInputChange('sort', value)}
+            type="number"
+          />
+        </Form>
+      </Modal.Body>
+      <div className="flex items-center justify-between">
+        <Button onClick={handleSubmit} appearance="primary" color="blue" loading={props.loading}>
+          {props.confirmMsg}
+        </Button>
+        <Button onClick={props.closeModal} appearance="subtle">
+          انصراف
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+export default createCategoryModal;
