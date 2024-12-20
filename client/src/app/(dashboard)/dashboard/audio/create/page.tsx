@@ -45,7 +45,7 @@ function CreateAudioPage() {
   // ---------------------- Data Fetching ----------------------
   const { data, isLoading } = useQuery({
     queryKey: ['allCategory'],
-    queryFn: allCategory,
+    queryFn: () => allCategory(),
   });
 
   const { mutateAsync } = useMutation({

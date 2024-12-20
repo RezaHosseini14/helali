@@ -5,7 +5,6 @@ type ConfirmModalPropsType = {
   open: boolean;
   onClose: () => void;
   handleDelete: () => void;
-  closeConfirmModal: () => void;
   loading: boolean;
   message: string;
   title: string;
@@ -23,7 +22,7 @@ function ConfirmModal(props: ConfirmModalPropsType) {
         <Button onClick={props.handleDelete} appearance="primary" color="red" loading={props.loading}>
           {props.confirmMsg}
         </Button>
-        <Button onClick={props.closeConfirmModal} appearance="subtle">
+        <Button onClick={props.onClose} appearance="subtle">
           انصراف
         </Button>
       </div>

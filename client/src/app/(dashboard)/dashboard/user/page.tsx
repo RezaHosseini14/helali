@@ -160,7 +160,6 @@ function UserPage() {
         onClose={handleCloseConfirmModal}
         title="تأیید حذف"
         message="آیا مطمئن هستید که می‌خواهید این کاربر را حذف کنید؟"
-        closeConfirmModal={handleCloseConfirmModal}
         loading={isPending}
         confirmMsg="حذف"
         handleDelete={handleDelete}

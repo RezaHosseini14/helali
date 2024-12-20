@@ -1,4 +1,4 @@
-import { CategoryFormValue } from '@/components/pages/dashboard/category/createCategory.modal';
+import { CategoryFormValue } from '@/components/pages/dashboard/category/CreateCategory.modal';
 import http from '../httpService';
 
 // export function allCategory() {
@@ -26,6 +26,14 @@ export function deleteCategory(id: number) {
   return http.delete(`/category/${id}`);
 }
 
+export function categoryById(id: number) {
+  return http.get(`/category/${id}`);
+}
+
 export function createCategory(data: CategoryFormValue) {
   return http.post('/category', data);
+}
+
+export function updateCategoryById(body: CategoryFormValue, id: number) {
+  return http.patch(`/category/${id}`, body);
 }

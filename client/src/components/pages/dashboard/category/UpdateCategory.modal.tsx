@@ -1,32 +1,20 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Form, Modal } from 'rsuite';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
+// Types
+import { CategoryFormValue, CreateCategoryPropsType } from './CreateCategory.modal';
+
 // Services
-import { createCategory } from 'services/category/categoryServices';
+import { categoryById, updateCategoryById } from 'services/category/categoryServices';
 
 // Components
 import TextField from '@/components/global/fields/TextField';
 
-export type CreateCategoryPropsType = {
-  open: boolean;
-  onClose: () => void;
-  loading?: boolean;
-  message: string;
-  title: string;
-  confirmMsg: string;
-  refetch: any;
-};
-
-export type CategoryFormValue = {
-  title: string;
-  sort: number;
-};
-
-function CreateCategoryModal(props: CreateCategoryPropsType) {
+function UpdateCategoryModal(props: CreateCategoryPropsType & { id: number }) {
   const formRef = useRef<any>();
   const [formValue, setFormValue] = useState<CategoryFormValue>({
     title: '',
@@ -34,11 +22,31 @@ function CreateCategoryModal(props: CreateCategoryPropsType) {
   });
 
   // ---------------------- Data Fetching ----------------------
-  const { mutateAsync } = useMutation({
-    mutationFn: createCategory,
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ['categoryById', props.id], // queryKey
+    queryFn: () => categoryById(Number(props.id)), // queryFn
+    enabled: !!props.id,
+    staleTime: 0,
+  });
+
+  // ---------------------- useEffect ----------------------
+  useEffect(() => {
+    if (data) {
+      setFormValue({
+        title: data?.data?.category?.title || '',
+        sort: data?.data?.category?.sort || 0,
+      });
+    }
+  }, [data]);
+
+  // ---------------------- Mutations ----------------------
+  const { mutateAsync, isPending } = useMutation({
+    mutationKey: ['updateCategoryById'],
+    mutationFn: (body: CategoryFormValue) => updateCategoryById(body, props.id),
   });
 
   // ---------------------- Handlers ----------------------
+
   const handleInputChange = (name: keyof CategoryFormValue, value: string | number) => {
     if (name === 'sort' && value !== '') {
       value = Number(value);
@@ -55,17 +63,28 @@ function CreateCategoryModal(props: CreateCategoryPropsType) {
       return;
     }
 
-    try {
-      const res = await mutateAsync(formValue);
+    const hasChanges = formValue.title !== data?.data?.category?.title || formValue.sort !== data?.data?.category?.sort;
 
-      if (res?.status === 201) {
-        toast.success('دسته‌بندی با موفقیت ایجاد شد');
+    if (!hasChanges) {
+      toast.error('تغییری اعمال نشده است');
+      return;
+    }
+
+    try {
+      const res = await mutateAsync({
+        title: formValue.title,
+        sort: formValue.sort,
+      });
+
+      if (res?.status === 200) {
+        toast.success('دسته‌بندی بروزرسانی شد');
         props.refetch();
+        props.onClose();
       } else {
-        toast.error('ایجاد دسته‌بندی با مشکل مواجه شد');
+        toast.error('به‌روزرسانی دسته‌بندی انجام نشد');
       }
     } catch (error) {
-      toast.error('ایجاد دسته‌بندی با مشکل مواجه شد');
+      toast.error('به‌روزرسانی دسته‌بندی انجام نشد');
     }
   };
 
@@ -96,7 +115,7 @@ function CreateCategoryModal(props: CreateCategoryPropsType) {
         </Form>
       </Modal.Body>
       <div className="flex items-center justify-between">
-        <Button onClick={handleSubmit} appearance="primary" color="blue" loading={props.loading}>
+        <Button onClick={handleSubmit} appearance="primary" color="blue" loading={isFetching || isPending}>
           {props.confirmMsg}
         </Button>
         <Button onClick={props.onClose} appearance="subtle">
@@ -107,4 +126,4 @@ function CreateCategoryModal(props: CreateCategoryPropsType) {
   );
 }
 
-export default CreateCategoryModal;
+export default UpdateCategoryModal;

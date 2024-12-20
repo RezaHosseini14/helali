@@ -151,7 +151,6 @@ function GalleriesListsPage() {
         onClose={handleCloseConfirmModal}
         title="تأیید حذف"
         message="آیا مطمئن هستید که می‌خواهید این فایل تصویری را حذف کنید؟"
-        closeConfirmModal={handleCloseConfirmModal}
         loading={isPending}
         confirmMsg="حذف"
         handleDelete={handleDelete}

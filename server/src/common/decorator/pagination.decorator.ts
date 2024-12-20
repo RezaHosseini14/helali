@@ -4,11 +4,11 @@ export const Pagination = createParamDecorator((data: unknown, ctx: ExecutionCon
   const request = ctx.switchToHttp().getRequest();
   const query = request.query;
 
-  const page = parseInt(query.page, 10) || 1; // صفحه پیش‌فرض: 1
-  const limit = parseInt(query.limit, 10) || 10; // تعداد موارد پیش‌فرض: 10
+  const page = query.page ? parseInt(query.page, 10) : undefined;
+  const limit = query.limit ? parseInt(query.limit, 10) : undefined;
 
   return {
-    page: Math.max(page, 1), // اطمینان از معتبر بودن شماره صفحه
-    limit: Math.min(Math.max(limit, 1), 100), // محدود کردن تعداد موارد به حداکثر 100
+    page: page ? Math.max(page, 1) : undefined,
+    limit: limit ? Math.min(Math.max(limit, 1), 100) : undefined,
   };
 });

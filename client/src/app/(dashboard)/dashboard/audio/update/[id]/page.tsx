@@ -31,8 +31,10 @@ type FormfileValueType = {
 
 function UpdateAudioPage({ params }: { params: { id: string } }) {
   // ---------------------- Data Fetching ----------------------
-  const { data, isLoading } = useQuery({ queryKey: ['allCategory'], queryFn: allCategory });
-
+  const { data, isLoading } = useQuery({
+    queryKey: ['allCategory'],
+    queryFn: () => allCategory(),
+  });
   const {
     data: dataAudioById,
     isLoading: isLoadingAudioById,

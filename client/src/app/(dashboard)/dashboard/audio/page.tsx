@@ -156,7 +156,6 @@ function AudiosListsPage() {
         onClose={handleCloseConfirmModal}
         title="تأیید حذف"
         message="آیا مطمئن هستید که می‌خواهید این فایل صوتی را حذف کنید؟"
-        closeConfirmModal={handleCloseConfirmModal}
         loading={isPending}
         confirmMsg="حذف"
         handleDelete={handleDelete}

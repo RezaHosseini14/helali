@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
-import { Button, Table } from 'rsuite';
+import { Table } from 'rsuite';
 
 // Services
 import { deleteCategory, allCategory } from 'services/category/categoryServices';
@@ -13,7 +13,8 @@ import ConfirmModal from '@/components/global/ConfirmModal';
 import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import TablePagination from '@/components/global/TablePagination';
-import CreateCategoryModal from '@/components/pages/dashboard/category/createCategory.modal';
+import CreateCategoryModal from '@/components/pages/dashboard/category/CreateCategory.modal';
+import UpdateCategoryModal from '@/components/pages/dashboard/category/UpdateCategory.modal';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -25,16 +26,9 @@ function CategoriesListsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(1);
-
   const [showCreateCategory, setShowCreateCategory] = useState<boolean>(false);
-
-  const handleOpenCreateCategoryModal = () => {
-    setShowCreateCategory(true);
-  };
-
-  const handleCloseCreateCategoryModal = () => {
-    setShowCreateCategory(false);
-  };
+  const [showUpdateCategory, setShowUpdateCategory] = useState<boolean>(false);
+  const [idCategory, setIdCategory] = useState<number>(0);
 
   // ---------------------- Data Fetching ----------------------
   const { data, isLoading, refetch } = useQuery({
@@ -60,6 +54,24 @@ function CategoriesListsPage() {
   const handleCloseConfirmModal = () => {
     setSelectedId(null);
     setShowConfirm(false);
+  };
+
+  const handleOpenUpdateCategoryModal = (id: number) => {
+    setShowUpdateCategory(true);
+    setIdCategory(id);
+  };
+
+  const handleCloseUpdateCategoryModal = () => {
+    setShowUpdateCategory(false);
+    setIdCategory(0);
+  };
+
+  const handleOpenCreateCategoryModal = () => {
+    setShowCreateCategory(true);
+  };
+
+  const handleCloseCreateCategoryModal = () => {
+    setShowCreateCategory(false);
   };
 
   const handleChangeLimit = (dataKey: any) => {
@@ -127,7 +139,7 @@ function CategoriesListsPage() {
                   <IconButton
                     className="update-btn"
                     icon="ki-solid ki-pencil"
-                    onClick={() => router.replace(`/dashboard/category/update/${rowData.id}`)}
+                    onClick={() => handleOpenUpdateCategoryModal(rowData.id)}
                     tooltipText="بروزرسانی"
                   />
                   <IconButton
@@ -148,7 +160,6 @@ function CategoriesListsPage() {
         onClose={handleCloseConfirmModal}
         title="تأیید حذف"
         message="آیا مطمئن هستید که می‌خواهید این دسته‌بندی را حذف کنید؟"
-        closeConfirmModal={handleCloseConfirmModal}
         loading={isPending}
         confirmMsg="حذف"
         handleDelete={handleDelete}
@@ -157,7 +168,16 @@ function CategoriesListsPage() {
       <CreateCategoryModal
         open={showCreateCategory}
         onClose={handleCloseCreateCategoryModal}
-        closeModal={handleCloseCreateCategoryModal}
+        message="لطفاً اطلاعات دسته‌بندی را وارد کنید"
+        title="ایجاد دسته‌بندی جدید"
+        confirmMsg="ثبت"
+        refetch={refetch}
+      />
+
+      <UpdateCategoryModal
+        id={idCategory}
+        open={showUpdateCategory}
+        onClose={handleCloseUpdateCategoryModal}
         message="لطفاً اطلاعات دسته‌بندی را وارد کنید"
         title="ایجاد دسته‌بندی جدید"
         confirmMsg="ثبت"
