@@ -26,6 +26,16 @@
   .update-btn {
     @apply grid place-content-center cursor-pointer bg-blue-700/30 text-blue-500 backdrop-blur-lg size-6 rounded-lg;
   }
+
+  .create-btn {
+    @apply grid place-content-center cursor-pointer bg-green-700/30 text-green-500 backdrop-blur-lg size-6 rounded-lg;
+  }
+  .section-style {
+    @apply bg-maincolor rounded-xl p-2;
+  }
+  .section-icon-style {
+    @apply h-full aspect-square rounded-2xl text-white bg-mainstructure text-center text-3xl grid place-content-center;
+  }
 }
 
 :root {

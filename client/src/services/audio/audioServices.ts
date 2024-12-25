@@ -33,8 +33,12 @@ export function addAudioComment(id: number, body: any) {
   return http.post(`/comments/audio/${id}`, body);
 }
 
+export function allAudioCommentsById(id: number) {
+  return http.get(`/comments/audio/${id}`);
+}
+
 export function allAudioComments() {
-  return http.get('/comments/audio');
+  return http.get(`/comments/audio`);
 }
 
 export function audioById(id: number) {

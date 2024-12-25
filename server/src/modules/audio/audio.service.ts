@@ -134,15 +134,40 @@ export class AudioService {
     };
   }
 
-  async findAllAudios(limit: number, page: number) {
+  async findAllAudios(limit: number = 100, page: number = 1) {
     try {
+      if (!page || !limit) {
+        const [audios, total] = await this.audioRepository
+          .createQueryBuilder('audio')
+          .leftJoinAndSelect('audio.categories', 'category')
+          .orderBy('audio.title', 'DESC')
+          .getManyAndCount();
+
+        if (audios.length <= 0) {
+          throw new HttpException('فایلی یافت نشد', HttpStatus.NOT_FOUND);
+        }
+
+        const audiosWithCategoryIds = audios.map((audio) => ({
+          ...audio,
+          categories: audio.categories.map((category) => category.id),
+        }));
+
+        return {
+          audios: audiosWithCategoryIds,
+          total,
+          currentPage: 1,
+          totalPages: 1,
+          statusCode: HttpStatus.OK,
+        };
+      }
+
       const [audios, total] = await this.audioRepository
         .createQueryBuilder('audio')
         .leftJoinAndSelect('audio.categories', 'category')
         .orderBy('audio.title', 'DESC')
-        .skip((page - 1) * limit) // محاسبه شروع رکوردها
-        .take(limit) // تعداد رکوردها در هر صفحه
-        .getManyAndCount(); // گرفتن لیست و تعداد کل رکوردها
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getManyAndCount();
 
       if (audios.length <= 0) {
         throw new HttpException('فایلی یافت نشد', HttpStatus.NOT_FOUND);
@@ -155,9 +180,9 @@ export class AudioService {
 
       return {
         audios: audiosWithCategoryIds,
-        total, // تعداد کل رکوردها
-        currentPage: page, // صفحه فعلی
-        totalPages: Math.ceil(total / limit), // تعداد کل صفحات
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
         statusCode: HttpStatus.ACCEPTED,
       };
     } catch (error) {

@@ -47,8 +47,27 @@ export class GalleryService {
     }
   }
 
-  async findAllImages(limit: number, page: number) {
+  async findAllImages(limit: number = 100, page: number = 1) {
     try {
+      if (!page || !limit) {
+        const [images, total] = await this.galleryRepository
+          .createQueryBuilder('image')
+          .orderBy('image.id', 'DESC')
+          .getManyAndCount();
+
+        if (images.length <= 0) {
+          throw new HttpException('تصویری یافت نشد', HttpStatus.NOT_FOUND);
+        }
+
+        return {
+          images,
+          total,
+          currentPage: 1,
+          totalPages: 1,
+          statusCode: HttpStatus.OK,
+        };
+      }
+
       const [images, total] = await this.galleryRepository
         .createQueryBuilder('image')
         .orderBy('image.id', 'DESC')

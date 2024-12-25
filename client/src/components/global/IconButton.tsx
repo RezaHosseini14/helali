@@ -5,12 +5,17 @@ type IconButtonPropsType = {
   onClick: () => void;
   className: string;
   icon: string;
-  tooltipText?: string; // Optional tooltip text
+  tooltipText?: string;
+  disabled?: boolean;
 };
 
 function IconButton(props: IconButtonPropsType) {
   const renderButton = (
-    <button className={props.className} onClick={props.onClick}>
+    <button
+      className={props.className + ' ' + 'disabled:cursor-not-allowed disabled:opacity-50'}
+      onClick={props.onClick}
+      disabled={props.disabled}
+    >
       <i className={props.icon}></i>
     </button>
   );
@@ -28,7 +33,7 @@ function IconButton(props: IconButtonPropsType) {
     );
   }
 
-  return renderButton; // Return without tooltip if no tooltipText is provided
+  return renderButton;
 }
 
 export default IconButton;

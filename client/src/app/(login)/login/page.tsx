@@ -8,6 +8,8 @@ import { login } from 'services/auth/authServices';
 import TextField from '@/components/global/fields/TextField';
 import { loginModel } from 'models/login.model';
 import toast from 'react-hot-toast';
+import PasswordField from '@/components/global/fields/PasswordField';
+import LoaderProvider from '@/components/global/LoaderProvider';
 
 function LoginPage() {
   type LoginType = {
@@ -42,21 +44,20 @@ function LoginPage() {
   };
 
   return (
-    <div className="h-screen w-screen grid place-content-center">
-      <div className="bg-mainColor/30 border border-mainColor shadow-lg w-96 h-fit min-h-64 rounded-xl">
-        {isPending ? (
-          <Loader center size="lg" />
-        ) : (
-          <Form
-            model={loginModel}
-            ref={formRef}
-            fluid
-            formValue={formValue}
-            className="relative flex flex-col gap-8 h-full p-4"
-          >
-            <h1 className="absolute text-xl right-1/2 translate-x-1/2 -top-6 bg-mainColor py-2 px-4 rounded-xl text-white">
-              ورود به سامانه
-            </h1>
+    <div className="h-screen w-screen grid place-content-center bg-mainstructure">
+      <div className="bg-maincolor shadow-lg w-96 h-fit min-h-64 rounded-xl">
+        <Form
+          model={loginModel}
+          ref={formRef}
+          fluid
+          formValue={formValue}
+          className="relative flex flex-col gap-8 h-full p-4"
+        >
+          <h1 className="absolute text-xl right-1/2 translate-x-1/2 -top-6 bg-maincolor py-2 px-4 rounded-xl text-white shadow-lg z-[60]">
+            ورود به سامانه
+          </h1>
+
+          <LoaderProvider className="rounded-xl" loading={isPending} size="lg">
             <div className="flex flex-col gap-2 w-full mt-8">
               <TextField
                 name="username"
@@ -66,7 +67,7 @@ function LoginPage() {
                 onChange={(value: string) => handleInputChange('username', value)}
               />
 
-              <TextField
+              <PasswordField
                 name="password"
                 title="رمز عبور"
                 containerClassName="col-span-6"
@@ -87,8 +88,8 @@ function LoginPage() {
             >
               ورود
             </Button>
-          </Form>
-        )}
+          </LoaderProvider>
+        </Form>
       </div>
     </div>
   );

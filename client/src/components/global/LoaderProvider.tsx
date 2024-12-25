@@ -7,6 +7,7 @@ type LoaderProviderPropsType = {
   children: ReactNode;
   loading: boolean;
   size?: LoaderProps['size'];
+  className?: string;
 };
 
 function LoaderProvider(props: LoaderProviderPropsType) {
@@ -25,9 +26,9 @@ function LoaderProvider(props: LoaderProviderPropsType) {
     <>
       {showLoader ? (
         <div
-          className={`absolute right-0 top-0 size-full z-50 backdrop-blur-md transition-opacity duration-700 ${
-            props.loading ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute right-0 top-0 size-full z-50 backdrop-blur-md transition-opacity duration-700 overflow-hidden ${
+            props.className && props.className
+          } ${props.loading ? 'opacity-100' : 'opacity-0'}`}
         >
           <Loader
             size={props.size ? props.size : 'lg'}

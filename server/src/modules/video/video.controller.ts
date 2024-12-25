@@ -32,7 +32,7 @@ export class VideoController {
 
     return await this.videoService.uploadFile(createAudioDto, bucketName, posterBucket, audioFile, posterFile);
   }
-
+ 
   @Get()
   findAllVideos(@Pagination() pagination: { page: number; limit: number }) {
     const { page, limit } = pagination;

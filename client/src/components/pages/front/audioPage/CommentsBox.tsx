@@ -4,7 +4,7 @@ import { Button, Form, Placeholder } from 'rsuite';
 import toast from 'react-hot-toast';
 
 // Services
-import { addAudioComment, allAudioComments } from 'services/audio/audioServices';
+import { addAudioComment, allAudioCommentsById } from 'services/audio/audioServices';
 
 //model
 import { commentModel } from 'models/comment.model';
@@ -30,10 +30,12 @@ function CommentsBox({ id }: { id: number }) {
   });
 
   // ---------------------- Data Fetching ----------------------
+
   const { data, isLoading, refetch, isFetching } = useQuery({
-    queryKey: ['allAudioComments'],
-    queryFn: allAudioComments,
+    queryKey: ['allAudioComments', id],
+    queryFn: () => allAudioCommentsById(Number(id)),
   });
+
   const { mutateAsync, isPending } = useMutation({
     mutationFn: ({ id, body }: { id: number; body: any }) => addAudioComment(id, body),
   });

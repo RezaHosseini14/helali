@@ -27,11 +27,11 @@ export class CommentsService {
   ];
   constructor(
     @InjectRepository(AudioCommentsEntity)
-    private audioCommentsRepository: Repository<AudioCommentsEntity>, // اصلاح نام متغیر
+    private audioCommentsRepository: Repository<AudioCommentsEntity>,
     @InjectRepository(AudioEntity)
     private audioRepository: Repository<AudioEntity>,
     @InjectRepository(GalleryCommentsEntity)
-    private galleryCommentsRepository: Repository<GalleryCommentsEntity>, // اصلاح نام متغیر
+    private galleryCommentsRepository: Repository<GalleryCommentsEntity>,
     @InjectRepository(GalleryEntity)
     private galleryRepository: Repository<GalleryEntity>,
   ) {}
@@ -57,7 +57,7 @@ export class CommentsService {
       audio: audio,
     });
 
-    const saveComment = await this.audioCommentsRepository.save(newComment); // اصلاح ریپازیتوری
+    const saveComment = await this.audioCommentsRepository.save(newComment);
     if (saveComment) {
       return {
         message: 'نظر شما ثبت شد',
@@ -94,10 +94,13 @@ export class CommentsService {
     }
   }
 
-  async allAudioComments(audioId: number) {
+  async allAudiosCommentsById(audioId: number) {
     try {
       const comments = await this.audioCommentsRepository.find({
-        where: { audio: { id: audioId } },
+        where: {
+          audio: { id: audioId },
+          status: 'published',
+        },
         order: { id: 'DESC' },
       });
       return {
@@ -105,6 +108,50 @@ export class CommentsService {
         statusCode: HttpStatus.OK,
         comments,
       };
-    } catch (error) {}
+    } catch (error) {
+      throw new HttpException('خطایی رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async allAudiosComments() {
+    try {
+      const comments = await this.audioCommentsRepository.find({
+        order: { id: 'DESC' },
+      });
+      return {
+        message: 'لیست نظرات دریافت شد',
+        statusCode: HttpStatus.OK,
+        comments,
+      };
+    } catch (error) {
+      throw new HttpException('خطایی رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateCommentStatus(commentId: number, newStatus: string, commentType: 'audio' | 'gallery') {
+    let comment;
+
+    if (commentType === 'audio') {
+      comment = await this.audioCommentsRepository.findOne({ where: { id: commentId } });
+      if (!comment) {
+        throw new HttpException('کامنت صوتی یافت نشد', HttpStatus.NOT_FOUND);
+      }
+    } else if (commentType === 'gallery') {
+      comment = await this.galleryCommentsRepository.findOne({ where: { id: commentId } });
+      if (!comment) {
+        throw new HttpException('کامنت گالری یافت نشد', HttpStatus.NOT_FOUND);
+      }
+    } else {
+      throw new HttpException('نوع کامنت معتبر نیست', HttpStatus.BAD_REQUEST);
+    }
+
+    comment.status = newStatus;
+
+    await this.audioCommentsRepository.save(comment);
+
+    return {
+      message: `وضعیت کامنت به ${newStatus} تغییر یافت`,
+      statusCode: HttpStatus.OK,
+    };
   }
 }

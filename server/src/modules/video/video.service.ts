@@ -79,8 +79,28 @@ export class VideoService {
     }
   }
 
-  async findAllVideos(page: number, limit: number) {
+  async findAllVideos(page: number = 1, limit: number = 100) {
     try {
+      if (!page || !limit) {
+        const [videos, total] = await this.videoRepository.findAndCount({
+          order: {
+            title: 'DESC',
+          },
+        });
+
+        if (videos.length <= 0) {
+          throw new HttpException('فایلی یافت نشد', HttpStatus.NOT_FOUND);
+        }
+
+        return {
+          videos,
+          total,
+          page: 1,
+          lastPage: 1,
+          statusCode: HttpStatus.OK,
+        };
+      }
+
       const [videos, total] = await this.videoRepository.findAndCount({
         order: {
           title: 'DESC',

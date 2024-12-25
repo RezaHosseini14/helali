@@ -97,28 +97,4 @@ export class UserService {
       throw error;
     }
   }
-
-  async blockUser(id: string, req: Request) {
-    try {
-      // checkYourself(req, id, 'امکان مسدود کردن کاربر نیست');
-      // const user = await this.findOne(id);
-      // const newStatus = !user.status;
-      // await this.userModel.findByIdAndUpdate(id, {
-      //   status: newStatus,
-      // });
-      // if (user.status) {
-      //   return new HttpException(
-      //     'کاربر از مسدود بودن خارج شد',
-      //     HttpStatus.ACCEPTED,
-      //   );
-      // } else {
-      //   return new HttpException(
-      //     'کاربر با موفقیت مسدود شد',
-      //     HttpStatus.ACCEPTED,
-      //   );
-      // }
-    } catch (error) {
-      throw error;
-    }
-  }
 }

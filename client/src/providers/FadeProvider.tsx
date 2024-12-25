@@ -12,7 +12,13 @@ const FadeProvider = ({ children }: FadeProviderProps) => {
   const pathname = usePathname();
   return (
     <AnimatePresence mode="wait">
-      <motion.div key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+      <motion.div
+        key={pathname}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="h-full"
+      >
         {children}
       </motion.div>
     </AnimatePresence>

@@ -84,11 +84,18 @@ export const dashboardMenuItems: dashboardMenuItemsType[] = [
         url: '/dashboard/category',
         icon: 'lots-shopping',
       },
-      // {
-      //   title: 'ایجاد دسته‌بندی',
-      //   url: '/dashboard/category/create',
-      //   icon: 'plus-square',
-      // },
+    ],
+  },
+  {
+    title: 'نظرات',
+    url: '/comment',
+    icon: 'messages',
+    children: [
+      {
+        title: 'لیست نظرات',
+        url: '/dashboard/comment',
+        icon: 'messages',
+      },
     ],
   },
 ];

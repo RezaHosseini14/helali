@@ -12,6 +12,13 @@ export class AudioCommentsEntity {
   @Column()
   text: string;
 
+  @Column({
+    type: 'enum',
+    enum: ['pending', 'published', 'rejected'],
+    default: 'pending',
+  })
+  status: 'pending' | 'published' | 'rejected';
+
   @CreateDateColumn({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
