@@ -20,3 +20,7 @@ export function allVideo(page?: number, limit?: number) {
 export function uploadVideo(body: any) {
   return http.post('/video/upload', body);
 }
+
+export function deleteVideo(id: number) {
+  return http.delete(`/video/${id}`);
+}

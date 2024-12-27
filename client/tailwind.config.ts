@@ -15,10 +15,15 @@ const config: Config = {
         mainbackground: 'var(mainbackground)',
         dashboardbackground: 'rgb(var(--background))',
         foreground: 'var(--foreground)',
-        mainColor: '#1f3835',
-        //new
+        mainColor: '#093537',
+        // mainColor: '#1f3835',
+
+        //new dashboard
         mainstructure: 'rgb(var(--mainstructure))',
         maincolor: 'var(--maincolor)',
+      },
+      boxShadow: {
+        mainshadow: '0 10px 40px -23px #093537',
       },
 
       container: {

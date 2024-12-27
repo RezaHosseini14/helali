@@ -5,6 +5,9 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { Table } from 'rsuite';
 
+//Functions
+import { handleResponse } from 'utils/functions';
+
 // Services
 import { deleteCategory, allCategory } from 'services/category/categoryServices';
 
@@ -85,12 +88,10 @@ function CategoriesListsPage() {
       const res = await mutateAsync(selectedId);
       if (res.status === 200) {
         refetch();
-        toast.success('دسته‌بندی با موفقیت حذف شد');
-      } else {
-        toast.error('حذف دسته‌بندی موفقیت‌آمیز نبود');
       }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('حذف دسته‌بندی موفقیت‌آمیز نبود');
+      handleResponse(null, error, '', 'مشکلی در حذف دسته‌بندی رخ داده است');
     } finally {
       handleCloseConfirmModal();
     }

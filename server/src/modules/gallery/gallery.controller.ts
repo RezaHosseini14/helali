@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, UseInterceptors, UploadedFile, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  UseInterceptors,
+  UploadedFile,
+  Delete,
+  BadRequestException,
+} from '@nestjs/common';
 import { GalleryService } from './gallery.service';
 import { CreateGalleryDto } from './dto/create-gallery.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -31,7 +42,18 @@ export class GalleryController {
     status: 201,
     description: 'Image uploaded successfully',
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 30 * 1024 * 1024 },
+      fileFilter(req, file, callback) {
+        const allowedMimeTypes = ['image/jpeg', 'image/png'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          return callback(new BadRequestException('فرمت فایل مجاز نیست'), false);
+        }
+        callback(null, true);
+      },
+    }),
+  )
   async uploadFile(@Body() createGalleryDto: CreateGalleryDto, @UploadedFile() file: Express.Multer.File) {
     const bucketName = 'gallery-bucket';
     return await this.galleryService.uploadImage(createGalleryDto, bucketName, file);

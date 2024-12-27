@@ -1,0 +1,52 @@
+@font-face {
+  font-family: pinar;
+  font-style: normal;
+  font-weight: 10;
+  src: url('./woff2/Pinar-FD-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: pinar;
+  font-style: normal;
+  font-weight: 300;
+  src: url('./ttf/Pinar-FD-Light.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: pinar;
+  font-style: normal;
+  font-weight: 500;
+  src: url('./ttf/Pinar-FD-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: pinar;
+  font-style: normal;
+  font-weight: 600;
+  src: url('./woff2/Pinar-FD-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: pinar;
+  font-style: normal;
+  font-weight: 800;
+  src: url('./ttf/Pinar-FD-ExtraBold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: pinar;
+  font-style: normal;
+  font-weight: bold;
+  src: url('./ttf/Pinar-FD-Bold.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: pinar;
+  font-style: normal;
+  font-weight: normal;
+  src: url('./woff2/Pinar-FD-Regular.woff2') format('woff2');
+}
+
+.pinar {
+  font-family: pinar !important;
+}

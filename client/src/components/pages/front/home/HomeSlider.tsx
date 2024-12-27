@@ -1,24 +1,31 @@
 'use client';
 import { useRef } from 'react';
-import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Swiper as SwiperType } from 'swiper';
 import { Navigation, Pagination, Scrollbar, A11y } from 'swiper/modules';
+import { useQuery } from '@tanstack/react-query';
 
-//css
+//Css
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/scrollbar';
-import { useQuery } from '@tanstack/react-query';
-import { allImage } from 'services/image/imageServices';
+
+//Types
 import { imageType } from 'types/image.type';
+
+//Services
+import { allImage } from 'services/image/imageServices';
+
+//Components
 import ImageWithLoader from '@/components/global/ImageWithLoader';
 
 function HomeSlider() {
   const swiperRef = useRef<SwiperType | null>(null);
-
-  const { data, isLoading } = useQuery({ queryKey: ['sliderImage'], queryFn: allImage });
+  const { data } = useQuery({
+    queryKey: ['sliderImage'],
+    queryFn: () => allImage(),
+  });
 
   return (
     <>
@@ -34,7 +41,6 @@ function HomeSlider() {
       >
         {data?.data?.images.slice(-5).map((image: imageType) => (
           <SwiperSlide key={image.id}>
-            {/* <Image src={image.path} className="w-full h-full" alt={image.desc} layout="fill" objectFit="cover" /> */}
             <ImageWithLoader src={image?.path} alt={image?.desc} />
           </SwiperSlide>
         ))}

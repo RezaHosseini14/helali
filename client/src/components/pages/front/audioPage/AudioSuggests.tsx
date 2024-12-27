@@ -13,7 +13,7 @@ function AudioSuggests({ audios, loadingIds, handleLike }: AudioSuggestsPropsTyp
   const { audiosLoading } = useSelector((state: RootState) => state.audio);
 
   return (
-    <div className="col-span-3 flex flex-col gap-4 h-screen">
+    <div className="col-span-3 flex flex-col gap-4 h-screen sticky top-4">
       {audiosLoading ? (
         <div className="flex flex-col gap-4">
           <Placeholder.Graph active className="rounded-xl w-full !h-24" />

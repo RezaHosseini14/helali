@@ -5,6 +5,9 @@ import { Button, Form, Modal } from 'rsuite';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
+//Functions
+import { handleResponse } from 'utils/functions';
+
 // Types
 import { CategoryFormValue, CreateCategoryPropsType } from './CreateCategory.modal';
 
@@ -77,14 +80,12 @@ function UpdateCategoryModal(props: CreateCategoryPropsType & { id: number }) {
       });
 
       if (res?.status === 200) {
-        toast.success('دسته‌بندی بروزرسانی شد');
         props.refetch();
         props.onClose();
-      } else {
-        toast.error('به‌روزرسانی دسته‌بندی انجام نشد');
       }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('به‌روزرسانی دسته‌بندی انجام نشد');
+      handleResponse(null, error, '', 'مشکلی در به‌روزرسانی دسته‌بندی رخ داده است');
     }
   };
 

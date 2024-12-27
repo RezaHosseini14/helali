@@ -3,11 +3,17 @@ import React, { useRef, useState } from 'react';
 import { Button, Form } from 'rsuite';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-//model
+
+//Functions
+import { handleResponse } from 'utils/functions';
+
+//Model
 import { createVideoModel } from 'models/createVideo.model';
-//services
+
+//Services
 import { uploadVideo } from 'services/video/videoServices';
-//components
+
+//Components
 import DashboardPanel from '@/components/global/DashboardPanel';
 import TexAreaField from '@/components/global/fields/TexAreaField';
 import TextField from '@/components/global/fields/TextField';
@@ -21,6 +27,7 @@ type videoFormValue = {
 };
 
 function CreateVideoPage() {
+  // ---------------------- State and Ref ----------------------
   const formRef = useRef<any>();
   const [formValue, setFormValue] = useState<videoFormValue>({
     title: '',
@@ -29,6 +36,12 @@ function CreateVideoPage() {
     poster: null,
   });
 
+  // ---------------------- Mutations ----------------------
+  const { mutateAsync, isPending } = useMutation({
+    mutationFn: uploadVideo,
+  });
+
+  // ---------------------- Event Handlers ----------------------
   const handleInputChange = (name: keyof videoFormValue, value: string) => {
     setFormValue((prev) => ({
       ...prev,
@@ -42,10 +55,6 @@ function CreateVideoPage() {
       [name]: fileList[0] || null,
     }));
   };
-
-  const { mutateAsync } = useMutation({
-    mutationFn: uploadVideo,
-  });
 
   const handleSubmit = async () => {
     if (!formRef.current.check() || !formValue.file) {
@@ -64,16 +73,13 @@ function CreateVideoPage() {
         //@ts-ignore
         formData.append('poster', formValue.poster.blobFile);
       const res = await mutateAsync(formData);
-      if (res?.status == 201) {
-        toast.success('ویدیو ذخیره شد');
-      } else {
-        toast.error('ویدیو ذخیره نشد');
-      }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('ویدیو ذخیره نشد');
+      handleResponse(null, error, '', 'مشکلی در آپلود ویدیو رخ داده است');
     }
   };
 
+  // ---------------------- Rendering ----------------------
   return (
     <DashboardPanel title="آپلود فایل ویدیو و پوستر">
       <Form model={createVideoModel} formValue={formValue} ref={formRef} fluid>
@@ -115,7 +121,7 @@ function CreateVideoPage() {
             accept="image/*"
           />
         </div>
-        <Button appearance="primary" onClick={handleSubmit}>
+        <Button appearance="primary" onClick={handleSubmit} loading={isPending}>
           ذخیره
         </Button>
       </Form>

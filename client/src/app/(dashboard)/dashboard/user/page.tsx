@@ -1,23 +1,23 @@
 'use client';
-import DashboardPanel from '@/components/global/DashboardPanel';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Table } from 'rsuite';
-import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/redux/store';
 import toast from 'react-hot-toast';
+
+//Functions
+import { handleResponse, shamsi } from 'utils/functions';
 
 //Services
 import { allUser, deleteUser } from 'services/user/userServices';
-
-//Functions
-import { shamsi } from 'utils/functions';
 
 //Components
 import ConfirmModal from '@/components/global/ConfirmModal';
 import IconButton from '@/components/global/IconButton';
 import TablePagination from '@/components/global/TablePagination';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
+import DashboardPanel from '@/components/global/DashboardPanel';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -68,12 +68,11 @@ function UserPage() {
       const res = await mutateAsync(selectedId);
       if (res.status === 200) {
         refetch();
-        toast.success('کاربر با موفقیت حذف شد');
-      } else {
-        toast.error('کاربر حذف نشد');
       }
+      handleResponse(res, null, '', '');
     } catch (error) {
       toast.error('خطا در حذف کاربر');
+      handleResponse(null, error, '', 'مشکلی در حذف کاربر رخ داده است');
     } finally {
       handleCloseConfirmModal();
     }

@@ -23,6 +23,7 @@ import TagField from '@/components/global/fields/TagField';
 import Audio from '@/components/global/Audio';
 import Image from 'next/image';
 import LoaderProvider from '@/components/global/LoaderProvider';
+import { handleResponse } from 'utils/functions';
 
 type FormfileValueType = {
   file: string;
@@ -126,7 +127,7 @@ function UpdateAudioPage({ params }: { params: { id: string } }) {
 
   // ---------------------- Handle Submit ----------------------
   const handleSubmit = async () => {
-    if (Object.keys(changedFields).length !== 0) {
+    if (Object.keys(changedFields).length === 0) {
       toast.error('تغییری اعمال نشده است');
       return;
     }
@@ -170,14 +171,12 @@ function UpdateAudioPage({ params }: { params: { id: string } }) {
 
       if (res?.status === 200) {
         refetch();
-        toast.success('صوت به‌روزرسانی شد');
-
         setChangedFields({});
-      } else {
-        toast.error('به‌روزرسانی صوت انجام نشد');
       }
+
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('به‌روزرسانی صوت انجام نشد');
+      handleResponse(null, error, '', 'مشکلی در به‌روزرسانی صوت رخ داده است');
     }
   };
 

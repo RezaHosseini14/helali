@@ -1,11 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDispatch, useSelector } from 'react-redux';
-import { Placeholder } from 'rsuite';
 
 // Store
 import { RootState } from '@/redux/store';
@@ -60,7 +58,7 @@ export default function AudioPage() {
 
   // ---------------------- Rendering ----------------------
   return (
-    <div className="grid grid-cols-12 gap-8 mt-16">
+    <div className="grid grid-cols-12 gap-8 mt-16 container">
       {/* Main Content */}
       <div className="col-span-9 w-full flex flex-col gap-8">
         {/* Audio Player */}

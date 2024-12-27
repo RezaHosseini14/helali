@@ -5,6 +5,9 @@ import { Button, Form, Modal } from 'rsuite';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
+//Functions
+import { handleResponse } from 'utils/functions';
+
 // Services
 import { createCategory } from 'services/category/categoryServices';
 
@@ -34,7 +37,7 @@ function CreateCategoryModal(props: CreateCategoryPropsType) {
   });
 
   // ---------------------- Data Fetching ----------------------
-  const { mutateAsync } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     mutationFn: createCategory,
   });
 
@@ -59,13 +62,11 @@ function CreateCategoryModal(props: CreateCategoryPropsType) {
       const res = await mutateAsync(formValue);
 
       if (res?.status === 201) {
-        toast.success('دسته‌بندی با موفقیت ایجاد شد');
         props.refetch();
-      } else {
-        toast.error('ایجاد دسته‌بندی با مشکل مواجه شد');
       }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('ایجاد دسته‌بندی با مشکل مواجه شد');
+      handleResponse(null, error, '', 'مشکلی در ایجاد دسته‌بندی رخ داده است');
     }
   };
 

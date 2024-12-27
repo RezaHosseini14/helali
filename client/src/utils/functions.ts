@@ -1,3 +1,5 @@
+import { toast } from 'react-hot-toast';
+
 export const getFileSize = (input: number | string) => {
   let output = '';
   if (typeof input !== 'undefined') {
@@ -53,5 +55,44 @@ export const shamsi = (date: string, format?: string): string => {
     const minute = d.getMinutes().toString().padStart(2, '0');
     const second = d.getSeconds().toString().padStart(2, '0');
     return `${hour}:${minute}:${second} - ${year}/${month}/${day}`;
+  }
+};
+
+export const handleResponse = (
+  response: any,
+  error: any = null,
+  successDefaultMessage: string = 'عملیات با موفقیت انجام شد',
+  errorDefaultMessage: string = 'خطای نامشخص',
+) => {
+  if (response) {
+    const statusCode = response?.status;
+    const successMessage = response?.data?.message || successDefaultMessage;
+
+    switch (statusCode) {
+      case 200:
+      case 201:
+      case 202:
+        toast.success(successMessage);
+    }
+  }
+
+  if (error) {
+    const statusCode = error?.response?.status;
+    const errorMessage = error?.response?.data?.message || errorDefaultMessage;
+
+    switch (statusCode) {
+      case 400:
+        toast.error('درخواست نامعتبر است: ' + errorMessage);
+        break;
+      case 413:
+        toast.error('حجم فایل بیش از حد مجاز است');
+        break;
+      case 500:
+        toast.error('خطای سرور: ' + errorMessage);
+        break;
+      // default:
+      //   toast.error('ارتباط با سرور برقرار نشد: ' + errorMessage);
+    }
+    return false;
   }
 };

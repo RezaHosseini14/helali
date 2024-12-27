@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { GalleryEntity } from './entities/gallery.entity';
 import { Repository } from 'typeorm';
 import { CreateGalleryDto } from './dto/create-gallery.dto';
+import * as sharp from 'sharp';
 
 @Injectable()
 export class GalleryService {
@@ -20,8 +21,16 @@ export class GalleryService {
       const timestamp = Date.now();
       const newFileName = `${timestamp}.${fileExtension}`;
 
-      await this.minioService.uploadFile(bucketName, {
+      const compressedBuffer = await sharp(file.buffer).jpeg({ quality: 80 }).toBuffer();
+
+      const compressedFile = {
         ...file,
+        buffer: compressedBuffer,
+        size: compressedBuffer.length,
+      };
+
+      await this.minioService.uploadFile(bucketName, {
+        ...compressedFile,
         originalname: newFileName,
       });
 
@@ -31,14 +40,14 @@ export class GalleryService {
         desc,
         path: filePath,
         originalName: newFileName,
-        size: file.size.toString(),
+        size: compressedFile.size.toString(),
         mimetype: file.mimetype,
       });
 
       const saveAudio = await this.galleryRepository.save(image);
       if (saveAudio) {
         return {
-          message: 'فایل آپلود شد',
+          message: 'فایل‌ها با موفقیت آپلود شد',
           statusCode: HttpStatus.CREATED,
         };
       }
@@ -46,6 +55,40 @@ export class GalleryService {
       throw error;
     }
   }
+  //without compress
+  // async uploadImage(createGalleryDto: CreateGalleryDto, bucketName: string, file: Express.Multer.File) {
+  //   try {
+  //     const { desc } = createGalleryDto;
+  //     const fileExtension = file.originalname.split('.').pop();
+  //     const timestamp = Date.now();
+  //     const newFileName = `${timestamp}.${fileExtension}`;
+
+  //     await this.minioService.uploadFile(bucketName, {
+  //       ...file,
+  //       originalname: newFileName,
+  //     });
+
+  //     const filePath = `http://${process.env.MINIO_URL}:${process.env.MINIO_PORT}/${bucketName}/${newFileName}`;
+
+  //     const image = this.galleryRepository.create({
+  //       desc,
+  //       path: filePath,
+  //       originalName: newFileName,
+  //       size: file.size.toString(),
+  //       mimetype: file.mimetype,
+  //     });
+
+  //     const saveAudio = await this.galleryRepository.save(image);
+  //     if (saveAudio) {
+  //       return {
+  //         message: 'فایل آپلود شد',
+  //         statusCode: HttpStatus.CREATED,
+  //       };
+  //     }
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
 
   async findAllImages(limit: number = 100, page: number = 1) {
     try {

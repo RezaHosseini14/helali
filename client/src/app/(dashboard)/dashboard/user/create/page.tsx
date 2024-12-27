@@ -5,6 +5,9 @@ import { Button, Form } from 'rsuite';
 import { useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
+//Functions
+import { handleResponse } from 'utils/functions';
+
 // Models
 import { registerModel } from 'models/register.model';
 
@@ -40,7 +43,7 @@ function CreateUserPage() {
   });
 
   // ---------------------- Data Fetching ----------------------
-  const { mutateAsync } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     mutationFn: registerUser,
   });
 
@@ -63,14 +66,10 @@ function CreateUserPage() {
 
     try {
       const res = await mutateAsync(formValue);
-
-      if (res?.status === 201) {
-        toast.success('کاربر با موفقیت ثبت شد');
-      } else {
-        toast.error('ثبت کاربر با مشکل مواجه شد');
-      }
+      handleResponse(res, null, '', '');
     } catch (error) {
       toast.error('ثبت کاربر با مشکل مواجه شد');
+      handleResponse(null, error, '', 'مشکلی در ثبت کاربر رخ داده است');
     }
   };
 
@@ -147,7 +146,7 @@ function CreateUserPage() {
             type="email"
           />
         </div>
-        <Button appearance="primary" onClick={handleSubmit}>
+        <Button appearance="primary" onClick={handleSubmit} loading={isPending}>
           ثبت‌نام
         </Button>
       </Form>

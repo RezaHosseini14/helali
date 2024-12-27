@@ -137,13 +137,13 @@ export class CategoryService {
       const updatedCategory = await this.categoryRepository.save(category);
 
       return {
-        message: 'دسته‌بندی با موفقیت به‌روزرسانی شد.',
+        message: 'دسته‌بندی با موفقیت به‌روزرسانی شد',
         category: updatedCategory,
         statusCode: HttpStatus.OK,
       };
     } catch (error) {
       throw new HttpException(
-        error.message || 'خطایی در به‌روزرسانی دسته‌بندی رخ داده است.',
+        error.message || 'خطایی در به‌روزرسانی دسته‌بندی رخ داده است',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
@@ -164,14 +164,14 @@ export class CategoryService {
       await this.categoryRepository.delete(id);
 
       return {
-        message: `دسته‌بندی با شناسه ${id} با موفقیت حذف شد.`,
+        message: `دسته‌بندی با شناسه ${id} با موفقیت حذف شد`,
         statusCode: HttpStatus.OK,
       };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
       }
-      throw new HttpException('خطایی در حذف دسته‌بندی رخ داده است.', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException('خطایی در حذف دسته‌بندی رخ داده است', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

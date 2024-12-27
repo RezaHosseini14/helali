@@ -2,24 +2,19 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
 import { Table } from 'rsuite';
 
 // Functions
-import { shamsi } from 'utils/functions';
+import { handleResponse, shamsi } from 'utils/functions';
 
 // Services
-import { deleteCategory, allCategory } from 'services/category/categoryServices';
 import { updateCommentStatus } from 'services/comment/commentServices';
 import { allAudioComments } from 'services/audio/audioServices';
 
 // Components
-import ConfirmModal from '@/components/global/ConfirmModal';
 import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import TablePagination from '@/components/global/TablePagination';
-import CreateCategoryModal from '@/components/pages/dashboard/category/CreateCategory.modal';
-import UpdateCategoryModal from '@/components/pages/dashboard/category/UpdateCategory.modal';
 
 const { Column, HeaderCell, Cell } = Table;
 
@@ -35,7 +30,6 @@ function CommentsListsPage() {
       return allAudioComments();
     },
   });
-  console.log(isFetching);
 
   // ---------------------- Mutations ----------------------
   const { mutateAsync, isPending } = useMutation({
@@ -56,12 +50,10 @@ function CommentsListsPage() {
       const res = await mutateAsync({ commentType, commentId, body });
       if (res.status === 200) {
         refetch();
-        toast.success('نظر منتشر شد');
-      } else {
-        toast.success('نظر منتشر نشد');
       }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('خطا در انتشاد نظر');
+      handleResponse(null, error, '', 'مشکلی در انتشار نظر رخ داده است');
     }
   };
 

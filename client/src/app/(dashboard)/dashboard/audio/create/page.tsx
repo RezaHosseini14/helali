@@ -5,6 +5,9 @@ import { Button, Form } from 'rsuite';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
+//Functions
+import { handleResponse } from 'utils/functions';
+
 // Types
 import { categoryType } from 'types/category.type';
 
@@ -48,7 +51,7 @@ function CreateAudioPage() {
     queryFn: () => allCategory(),
   });
 
-  const { mutateAsync } = useMutation({
+  const { mutateAsync, isPending } = useMutation({
     mutationFn: uploadAudio,
   });
 
@@ -92,13 +95,9 @@ function CreateAudioPage() {
 
       const res = await mutateAsync(formData);
 
-      if (res?.status === 201) {
-        toast.success('صوت ذخیره شد');
-      } else {
-        toast.error('صوت ذخیره نشد');
-      }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('صوت ذخیره نشد');
+      handleResponse(null, error, '', 'مشکلی در آپلود صوت رخ داده است');
     }
   };
 
@@ -156,7 +155,7 @@ function CreateAudioPage() {
             accept="image/*"
           />
         </div>
-        <Button appearance="primary" onClick={handleSubmit}>
+        <Button appearance="primary" onClick={handleSubmit} loading={isPending}>
           ذخیره
         </Button>
       </Form>

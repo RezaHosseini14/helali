@@ -32,7 +32,7 @@ export class VideoController {
 
     return await this.videoService.uploadFile(createAudioDto, bucketName, posterBucket, audioFile, posterFile);
   }
- 
+
   @Get()
   findAllVideos(@Pagination() pagination: { page: number; limit: number }) {
     const { page, limit } = pagination;
@@ -51,6 +51,8 @@ export class VideoController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.videoService.remove(+id);
+    const bucketName = 'audio-bucket';
+    const posterBucket = 'poster-bucket';
+    return this.videoService.remove(+id, bucketName, posterBucket);
   }
 }

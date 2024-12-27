@@ -134,7 +134,27 @@ export class VideoService {
     return `This action updates a #${id} video`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} video`;
+  async remove(id: number, videoBucket: string, posterBucket: string) {
+    try {
+      const video = await this.videoRepository.findOne({ where: { id } });
+
+      if (!video) {
+        throw new HttpException('فایل موردنظر یافت نشد', HttpStatus.NOT_FOUND);
+      }
+
+      await this.minioService.deleteFile(videoBucket, video.originalName);
+
+      await this.minioService.deleteFile(posterBucket, video.posterOriginalName);
+
+      await this.videoRepository.delete(id);
+
+      return {
+        message: 'فایل و پوستر با موفقیت حذف شدند',
+        statusCode: HttpStatus.OK,
+      };
+    } catch (error) {
+      console.error('خطا در حذف فایل:', error);
+      throw new HttpException('مشکلی در حذف فایل رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

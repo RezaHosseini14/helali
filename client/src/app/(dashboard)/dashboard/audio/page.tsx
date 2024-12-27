@@ -3,14 +3,14 @@ import React, { useState } from 'react';
 import DashboardPanel from '@/components/global/DashboardPanel';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Pagination, Table } from 'rsuite';
+import { Table } from 'rsuite';
 import { useRouter } from 'next/navigation';
+
+//Functions
+import { getFileSize, handleResponse, shamsi } from 'utils/functions';
 
 // Services
 import { allAudio, deleteAudio } from 'services/audio/audioServices';
-
-//Functions
-import { getFileSize, shamsi } from 'utils/functions';
 
 //Components
 import ConfirmModal from '@/components/global/ConfirmModal';
@@ -65,12 +65,10 @@ function AudiosListsPage() {
       const res = await mutateAsync(selectedId);
       if (res.status === 200) {
         refetch();
-        toast.success('فایل صوتی با موفقیت حذف شد');
-      } else {
-        toast.error('فایل صوتی حذف نشد');
       }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('خطا در حذف فایل صوتی');
+      handleResponse(null, error, '', 'مشکلی در حذف صوت رخ داده است');
     } finally {
       handleCloseConfirmModal();
     }

@@ -1,21 +1,20 @@
 'use client';
+
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { Table } from 'rsuite';
 
-// Services
-import { deleteImage } from 'services/gallery/galleryServices';
-
 //Functions
-import { getFileSize, shamsi } from 'utils/functions';
+import { getFileSize, handleResponse, shamsi } from 'utils/functions';
+
+// Services
+import { allVideo, deleteVideo } from 'services/video/videoServices';
 
 //Components
 import ConfirmModal from '@/components/global/ConfirmModal';
 import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
-import { allVideo } from 'services/video/videoServices';
 import TablePagination from '@/components/global/TablePagination';
 
 const { Column, HeaderCell, Cell } = Table;
@@ -40,8 +39,8 @@ function videosListsPage() {
 
   // ---------------------- Mutations ----------------------
   const { mutateAsync, isPending } = useMutation({
-    mutationKey: ['deleteImage'],
-    mutationFn: (id: number) => deleteImage(id),
+    mutationKey: ['deleteVideo'],
+    mutationFn: (id: number) => deleteVideo(id),
   });
 
   // ---------------------- Event Handlers ----------------------
@@ -66,12 +65,10 @@ function videosListsPage() {
       const res = await mutateAsync(selectedId);
       if (res.status === 200) {
         refetch();
-        toast.success('فایل تصویری با موفقیت حذف شد');
-      } else {
-        toast.error('فایل تصویری حذف نشد');
       }
+      handleResponse(res, null, '', '');
     } catch (error) {
-      toast.error('فایل تصویری حذف نشد');
+      handleResponse(null, error, '', 'مشکلی در حذف ویدیویی رخ داده است');
     } finally {
       handleCloseConfirmModal();
     }
@@ -155,7 +152,7 @@ function videosListsPage() {
         open={showConfirm}
         onClose={handleCloseConfirmModal}
         title="تأیید حذف"
-        message="آیا مطمئن هستید که می‌خواهید این فایل تصویری را حذف کنید؟"
+        message="آیا مطمئن هستید که می‌خواهید این فایل ویدیویی را حذف کنید؟"
         loading={isPending}
         confirmMsg="حذف"
         handleDelete={handleDelete}

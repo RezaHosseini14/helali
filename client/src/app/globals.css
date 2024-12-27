@@ -9,7 +9,7 @@
 
 @layer components {
   .glass-back {
-    @apply bg-mainColor/20 backdrop-blur-md;
+    @apply bg-white backdrop-blur-md;
   }
   .card-box {
     @apply rounded-xl border border-gray-600 bg-mainstructure p-4;
@@ -26,7 +26,6 @@
   .update-btn {
     @apply grid place-content-center cursor-pointer bg-blue-700/30 text-blue-500 backdrop-blur-lg size-6 rounded-lg;
   }
-
   .create-btn {
     @apply grid place-content-center cursor-pointer bg-green-700/30 text-green-500 backdrop-blur-lg size-6 rounded-lg;
   }
@@ -39,12 +38,12 @@
 }
 
 :root {
-  /* --background: #dbe2ef; */
-  /* --background: #1f383512; */
-  /* --background: #f4f5f7; */
-  /* --mainColor: #1f3835; */
-  /* --mainColor: #3f72af; */
+  --mainColor: #093537;
+  /* plyr start */
   --plyr-color-main: var(--mainColor);
+  --plyr-video-background: #fff;
+  /* plyr end */
+
   /* ///////////////////////////////////////////// */
   --mainbackground: #eff0f0;
   --mainforeground: #171717;
@@ -67,3 +66,12 @@
     /* --maincolor: #205375; */
   }
 }
+
+/* plyr start */
+.plyr__poster {
+  background-size: cover !important;
+}
+.plyr {
+  height: 100% !important;
+}
+/* plyr end */
