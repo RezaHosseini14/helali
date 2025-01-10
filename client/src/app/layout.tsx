@@ -8,6 +8,8 @@ import '@/assets/css/style.css';
 import '@/assets/fonts/keenicons/icon.css';
 import '@/assets/fonts/ERPyb/ERPyb.css';
 import '@/assets/fonts/pinar/pinar.css';
+import '@/assets/fonts/gofteh/gofteh.css';
+import '@/assets/fonts/potk/potk.css';
 import 'plyr/dist/plyr.css';
 
 //Providers

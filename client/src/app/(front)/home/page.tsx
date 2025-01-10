@@ -42,36 +42,37 @@ function HomePage() {
 
   return (
     <>
-      {audiosLoading && imagesIsLoading && videosIsLoading ? (
-        <HomePageLoader />
-      ) : (
-        <div className="grid grid-cols-12 gap-x-8 gap-y-16 mt-8 h-max">
-          <div className="container grid gap-8 grid-cols-12 col-span-12">
-            <div className="slider-box lg:col-span-9 md:col-span-8 col-span-12 glass-back rounded-xl overflow-hidden xl:h-[30rem] md:h-[25rem] sm:h-[20rem] h-[15rem] shadow-mainshadow">
-              <HomeSlider />
+      <div className="grid grid-cols-12 gap-x-8 gap-y-16 mt-8 h-max">
+        {audiosLoading && imagesIsLoading && videosIsLoading ? (
+          <HomePageLoader />
+        ) : (
+          <>
+            <div className="container grid gap-8 grid-cols-12 col-span-12">
+              <div className="slider-box lg:col-span-9 md:col-span-8 col-span-12 glass-back rounded-xl overflow-hidden xl:h-[30rem] md:h-[25rem] sm:h-[20rem] h-[15rem] shadow-mainshadow">
+                <HomeSlider />
+              </div>
+              <div className="donate-box lg:col-span-3 md:col-span-4 col-span-12">
+                <DonateBox />
+              </div>
             </div>
-            <div className="donate-box lg:col-span-3 md:col-span-4 col-span-12">
-              <DonateBox />
+
+            <div className="audios-box col-span-12 container">
+              <AudiosBox audios={audios} />
             </div>
-          </div>
 
-          <div className="audios-box col-span-12 container">
-            <AudiosBox audios={audios} />
-          </div>
+            <div className="images-box col-span-12 container">
+              <ImagesBox images={data?.data?.images} />
+            </div>
 
-          <div className="images-box col-span-12 container">
-            <ImagesBox images={data?.data?.images} />
-          </div>
+            <div className="videos-box col-span-12">
+              <VideosBox videos={videosData?.data?.videos} />
+            </div>
 
-          <div className="videos-box col-span-12">
-            <VideosBox videos={videosData?.data?.videos} />
-          </div>
+            <div className="audios-box col-span-12 container">
+              <ChildrenBox audios={audios} />
+            </div>
 
-          <div className="audios-box col-span-12 container">
-            <ChildrenBox audios={audios} />
-          </div>
-
-          {/* <div className="note-box sm:col-span-6 col-span-12 sm:order-3 order-4">
+            {/* <div className="note-box sm:col-span-6 col-span-12 sm:order-3 order-4">
             <Image
               src="/images/note/note1.png"
               alt="note"
@@ -86,8 +87,9 @@ function HomePage() {
               <Image src="/images/helali.png" alt="helali" width={900} height={900} className="-mb-16" />
             </div>
           </div> */}
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </>
   );
 }

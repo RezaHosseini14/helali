@@ -24,3 +24,7 @@ export function uploadVideo(body: any) {
 export function deleteVideo(id: number) {
   return http.delete(`/video/${id}`);
 }
+
+export function videoById(id: number) {
+  return http.get(`/video/${id}`);
+}

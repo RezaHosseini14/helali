@@ -1,14 +1,18 @@
-import ImageWithLoader from '@/components/global/ImageWithLoader';
-import Image from 'next/image';
-import React from 'react';
 import { Placeholder } from 'rsuite';
+
+//Types
 import { audioTypes } from 'types/audio.type';
+
+//Components
+import ImageWithLoader from '@/components/global/ImageWithLoader';
+
 type AudioDetailsPropsType = {
   audio: audioTypes;
   handlePlay: () => void;
   currentAudioStatus: boolean;
   isLoading: boolean;
 };
+
 function AudioDetails(props: AudioDetailsPropsType) {
   return (
     <>
@@ -18,14 +22,6 @@ function AudioDetails(props: AudioDetailsPropsType) {
         <div id="audio-details" className="flex flex-col items-center justify-center bg-white rounded-xl p-4">
           <div className="relative mb-8">
             <div className="!size-48 rounded-3xl shadow-lg !overflow-hidden relative">
-              {/* <Image
-                className="size-full"
-                src={props.audio?.posterPath}
-                alt={props.audio?.title}
-                layout="fill"
-                objectFit="cover"
-              /> */}
-
               <ImageWithLoader src={props.audio?.posterPath} alt={props.audio?.title} />
             </div>
 

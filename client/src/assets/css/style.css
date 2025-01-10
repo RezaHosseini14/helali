@@ -56,6 +56,13 @@
   margin-top: 0 !important;
 }
 
+/* front */
+
+.front .rs-input,
+.front .rs-picker {
+  background-color: rgb(9 53 55 / 0.1) !important;
+  border: unset !important;
+}
 /* rsuite change end */
 
 /* animation start */
@@ -91,3 +98,45 @@
   }
 }
 /* animation end */
+
+/* slider start */
+.custom-pagination .swiper-pagination-bullet {
+  width: 10px;
+  height: 10px;
+  background-color: rgba(255, 255, 255, 0.743);
+  border-radius: 1rem;
+  transition: all 0.3s;
+  opacity: 1 !important;
+}
+
+.custom-pagination .swiper-pagination-bullet-active {
+  background-color: var(--mainColor);
+  width: 20px !important;
+}
+/* slider end */
+
+.pattern::before {
+  content: '';
+  background: url('/images/patterns/pattern-1.png') no-repeat;
+  background-size: cover;
+  background-position: center center;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 82%;
+  height: 100%;
+  background-size: 150%;
+  mask-image: linear-gradient(to left, black, transparent);
+  -webkit-mask-image: linear-gradient(to left, black, transparent);
+  z-index: -1;
+  opacity: 0.1;
+  border-radius: 0 1rem 1rem 0;
+  filter: invert(16%) sepia(25%) saturate(1204%) hue-rotate(133deg) brightness(96%) contrast(97%);
+}
+
+
+body.front {
+  background: url('/images/pulse.svg') no-repeat;
+  background-position: top left;
+  background-size: 70% auto;
+}

@@ -1,0 +1,10 @@
+@font-face {
+  font-family: potk;
+  font-style: normal;
+  font-weight: 900;
+  src: url("./woff/Potk.woff") format("woff");
+}
+
+.potk {
+  font-family: potk !important;
+}

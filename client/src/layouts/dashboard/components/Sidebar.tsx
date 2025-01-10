@@ -1,11 +1,13 @@
 'use client';
 
-import { dashboardMenuItems } from '@/jsons/dashboardMenuItems';
 import { RootState } from '@/redux/store';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Tooltip, Whisper } from 'rsuite';
+import { motion } from 'framer-motion';
+// Jsons
+import { dashboardMenuItems } from '@/jsons/dashboardMenuItems';
 
 function Sidebar() {
   const [MenueItemActive, setMenueItemActive] = useState<number>(() => {
@@ -41,6 +43,23 @@ function Sidebar() {
     }
   }, []);
 
+  const menuVariants = {
+    hidden: { opacity: 0, x: 50 },
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        duration: 0.5,
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const childVariants = {
+    hidden: { opacity: 0, x: 20 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
+  };
+
   return (
     <div
       className={`bg-mainstructure ${
@@ -70,17 +89,23 @@ function Sidebar() {
 
       {/* Children Menu */}
       <div
-        className={`py-4 border-s border-gray-600 transition-all duration-200 ease-in-out ${
+        className={`py-4 border-s border-gray-600 transition-all duration-200 ease-in-out overflow-hidden ${
           sidebarStatus ? 'opacity-100 visible delay-300 w-48 px-2' : 'opacity-0 invisible !w-0 !p-0 delay-100'
         }`}
       >
         {dashboardMenuItems[MenueItemActive]?.children ? (
-          <ul className="flex flex-col gap-4">
-            <p className="font-bold px-2 pb-2 border-b border-gray-600 text-xl">
+          <motion.ul
+            key={MenueItemActive}
+            className="flex flex-col gap-4"
+            initial="hidden"
+            animate="visible"
+            variants={menuVariants}
+          >
+            <motion.p className="font-bold px-2 pb-2 border-b border-gray-600 text-xl" variants={childVariants}>
               {dashboardMenuItems[MenueItemActive].title}
-            </p>
+            </motion.p>
             {dashboardMenuItems[MenueItemActive].children?.map((child, childIndex) => (
-              <li key={childIndex}>
+              <motion.li key={childIndex} variants={childVariants}>
                 <Link
                   href={child.url}
                   onClick={() => handleChildClick(child.url)}
@@ -93,11 +118,18 @@ function Sidebar() {
                   <i className={`ki-solid ki-${child.icon} text-xl`}></i>
                   <span className="text-base">{child.title}</span>
                 </Link>
-              </li>
+              </motion.li>
             ))}
-          </ul>
+          </motion.ul>
         ) : (
-          <p className="text-gray-500">زیرمنویی موجود نیست</p>
+          <motion.p
+            className="text-gray-500"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            زیرمنویی موجود نیست
+          </motion.p>
         )}
       </div>
     </div>

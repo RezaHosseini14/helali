@@ -21,6 +21,9 @@ const config: Config = {
         //new dashboard
         mainstructure: 'rgb(var(--mainstructure))',
         maincolor: 'var(--maincolor)',
+
+        //children color
+        childrencolor: '#9690E4',
       },
       boxShadow: {
         mainshadow: '0 10px 40px -23px #093537',

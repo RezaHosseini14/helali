@@ -34,16 +34,9 @@ function DonateBox() {
     }
   };
   return (
-    <Panel title="کمک به تکیه" fill icon="ki-outline ki-dollar">
+    <Panel title="کمک به تکیه" fill icon="ki-solid ki-dollar">
       <Form model={donateModel} ref={formRef} formValue={formValue}>
         <div className="grid grid-cols-12 gap-4 mb-4">
-          <TextField
-            name="name"
-            title="نام و نام خانوادگی"
-            containerClassName="col-span-12"
-            value={formValue.price}
-            onChange={(value: number | null) => handleInputChange('price', value)}
-          />
           <TextField
             name="price"
             title="مبلغ"
@@ -52,8 +45,8 @@ function DonateBox() {
             onChange={(value: number | null) => handleInputChange('price', value)}
           />
         </div>
-        <Button appearance="primary" color="green" onClick={handleSubmit} block>
-          ذخیره
+        <Button appearance="primary" className="btn-mainColor font-bold text-lg" onClick={handleSubmit} block>
+          پرداخت
         </Button>
       </Form>
     </Panel>

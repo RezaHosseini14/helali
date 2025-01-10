@@ -7,9 +7,6 @@ import { useQuery } from '@tanstack/react-query';
 
 //Css
 import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import 'swiper/css/scrollbar';
 
 //Types
 import { imageType } from 'types/image.type';
@@ -28,12 +25,15 @@ function HomeSlider() {
   });
 
   return (
-    <>
+    <div className="relative !size-full">
       <Swiper
         modules={[Navigation, Pagination, Scrollbar, A11y]}
         spaceBetween={50}
         slidesPerView={1}
-        pagination={{ clickable: true }}
+        pagination={{
+          clickable: true,
+          el: '.custom-pagination',
+        }}
         onSwiper={(swiperInstance) => {
           swiperRef.current = swiperInstance;
         }}
@@ -44,17 +44,26 @@ function HomeSlider() {
             <ImageWithLoader src={image?.path} alt={image?.desc} />
           </SwiperSlide>
         ))}
-
-        <div className="custom-navigation !text-white">
-          <button onClick={() => swiperRef.current?.slidePrev()}>
-            <i className="ki-solid ki-right"></i>
-          </button>
-          <button onClick={() => swiperRef.current?.slideNext()}>
-            <i className="ki-solid ki-left"></i>
-          </button>
-        </div>
       </Swiper>
-    </>
+
+      <div className="custom-pagination !w-fit bg-white/30 backdrop-blur-sm p-2 rounded-md absolute right-1/2 translate-x-1/2 bottom-4 z-50 flex items-center gap-2"></div>
+
+      {/* دکمه‌های ناوبری داخل Swiper */}
+      <div className="absolute top-1/2 left-0 right-0 flex justify-between px-4 z-50">
+        <button
+          onClick={() => swiperRef.current?.slidePrev()}
+          className="focus:outline-none bg-mainColor/70 hover:bg-mainColor backdrop-blur-md text-white p-2 rounded-full shadow-md transition-transform transform hover:scale-110"
+        >
+          <i className="ki-solid ki-to-right text-xl"></i>
+        </button>
+        <button
+          onClick={() => swiperRef.current?.slideNext()}
+          className="focus:outline-none bg-mainColor/70 hover:bg-mainColor backdrop-blur-md text-white p-2 rounded-full shadow-md transition-transform transform hover:scale-110"
+        >
+          <i className="ki-solid ki-to-left text-xl"></i>
+        </button>
+      </div>
+    </div>
   );
 }
 

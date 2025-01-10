@@ -3,7 +3,17 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 
-function ImageWithLoader({ src, alt, className }: { src: string; alt: string; className?: string }) {
+function ImageWithLoader({
+  src,
+  alt,
+  className,
+  imageClassName,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  imageClassName?: string;
+}) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const handleImageLoad = () => {
@@ -19,7 +29,9 @@ function ImageWithLoader({ src, alt, className }: { src: string; alt: string; cl
         layout="fill"
         objectFit="cover"
         onLoadingComplete={handleImageLoad}
-        className={`transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        className={`transition-opacity duration-1000 ${isLoaded ? 'opacity-100' : 'opacity-0'} ${
+          imageClassName ? imageClassName : ''
+        }`}
       />
     </div>
   );

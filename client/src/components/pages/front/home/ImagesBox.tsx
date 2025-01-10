@@ -1,16 +1,13 @@
-import React, { useRef, useState } from 'react';
+'use client';
+import { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Panel from '@/components/global/Panel';
 import ReactDOM from 'react-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Swiper as SwiperType } from 'swiper';
-import { Navigation, Pagination, Scrollbar, A11y } from 'swiper/modules';
 
 //Css
 import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import 'swiper/css/scrollbar';
 
 // Types
 import { imageType } from 'types/image.type';
@@ -25,7 +22,6 @@ const ImagePlayer = dynamic(() => import('@/components/global/ImagePlayer'), {
 
 function ImagesBox({ images }: { images: imageType[] }) {
   const swiperRef = useRef<SwiperType | null>(null);
-
   const [isViewerOpen, setIsViewerOpen] = useState<boolean>(false);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
 
@@ -47,7 +43,7 @@ function ImagesBox({ images }: { images: imageType[] }) {
   };
 
   return (
-    <Panel title="تصاویر" fill icon="ki-outline ki-picture">
+    <Panel title="تصاویر" fill icon="ki-solid ki-picture" moreButton={{ url: '/gallery' }}>
       {images?.length > 0 ? (
         <>
           <Swiper
@@ -77,12 +73,16 @@ function ImagesBox({ images }: { images: imageType[] }) {
               <SwiperSlide key={image.id}>
                 <div
                   key={index}
-                  className="group rounded-lg bg-white aspect-square w-full h-full overflow-hidden relative cursor-pointer"
+                  className="group rounded-3xl bg-white aspect-square w-full h-full overflow-hidden relative cursor-pointer"
                   onClick={() => openViewer(index)}
                 >
                   <div className="z-30 absolute inset-0 bg-mainColor opacity-0 group-hover:opacity-50 transition-opacity"></div>
-                  <ImageWithLoader src={image?.path} alt={image?.desc} />
-                  <p className="z-50 truncate absolute bottom-0 left-0 right-0 bg-mainColor text-white text-center py-2 translate-y-full group-hover:translate-y-0 transition-transform">
+                  <ImageWithLoader
+                    imageClassName="group-hover:scale-110 transition-transform !duration-150"
+                    src={image?.path}
+                    alt={image?.desc}
+                  />
+                  <p className="z-50 truncate absolute bottom-0 left-0 right-0 bg-mainColor/10 backdrop-blur-md text-white text-center py-2 translate-y-full group-hover:translate-y-0 transition-transform">
                     {image?.desc}
                   </p>
                 </div>

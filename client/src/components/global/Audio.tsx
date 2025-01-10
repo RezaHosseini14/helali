@@ -1,8 +1,18 @@
 'use client';
-import { useWavesurfer } from '@wavesurfer/react';
 import Image from 'next/image';
+import { RootState } from '@/redux/store';
+import { useWavesurfer } from '@wavesurfer/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+
+//Types
 import { audioTypes } from 'types/audio.type';
+
+//Slices
+import { SET_CURRENT_AUDIO_STATUS } from '@/redux/slices/audioSlice';
+
+//Functions
+import { formatTime } from 'utils/functions';
 
 export type AudioPropsTypes = {
   audioUrl: string;
@@ -11,19 +21,23 @@ export type AudioPropsTypes = {
   audioHeight?: number;
   height?: string;
   showImage?: boolean;
+  widthFit?: boolean;
+  closeBtn: boolean;
 };
-const formatTime = (seconds: number) =>
-  [seconds / 60, seconds % 60].map((v) => `0${Math.floor(v)}`.slice(-2)).join(':');
 
-function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height, showImage }: AudioPropsTypes) {
+function Audio(props: AudioPropsTypes) {
+  const dispatch = useDispatch();
+  const { currentAudioStatus } = useSelector((state: RootState) => state.audio);
+
+  // ---------------------- State & Ref & Hook ----------------------
   const containerRef = useRef<null | any>(null);
   const [urlIndex, setUrlIndex] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
 
   const { wavesurfer, isPlaying, isReady, currentTime } = useWavesurfer({
     container: containerRef,
-    height: audioHeight ? audioHeight : 25,
-    width: audioWidth ? audioWidth : 220,
+    height: props.audioHeight ? props.audioHeight : 25,
+    width: props.audioWidth ? props.audioWidth : 220,
     waveColor: '#ffffff',
     progressColor: '#d60060',
     cursorColor: '#ddd5e9',
@@ -31,18 +45,10 @@ function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height, showIm
     barGap: 3,
     barRadius: 30,
     barHeight: 1,
-    url: audioUrl,
+    url: props.audioUrl,
   });
 
-  useEffect(() => {
-    if (wavesurfer) {
-      wavesurfer.load(audioUrl);
-      wavesurfer.on('ready', () => {
-        setDuration(wavesurfer.getDuration());
-      });
-    }
-  }, [urlIndex, wavesurfer]);
-
+  // ---------------------- Event Handlers ----------------------
   const onPlayPause = useCallback(() => {
     if (wavesurfer) {
       if (wavesurfer.isPlaying()) {
@@ -53,19 +59,44 @@ function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height, showIm
     }
   }, [wavesurfer]);
 
+  const handleClose = () => {
+    dispatch(SET_CURRENT_AUDIO_STATUS(false));
+  };
+
+  // ---------------------- UseEffect ----------------------
+  useEffect(() => {
+    if (wavesurfer) {
+      wavesurfer.load(props.audioUrl);
+      wavesurfer.on('ready', () => {
+        setDuration(wavesurfer.getDuration());
+      });
+    }
+  }, [urlIndex, wavesurfer]);
+
+  useEffect(() => {
+    if (wavesurfer && isReady) {
+      if (currentAudioStatus) {
+        wavesurfer.play();
+      } else {
+        wavesurfer.pause();
+      }
+    }
+  }, [currentAudioStatus, wavesurfer, isReady]);
+
+  // ---------------------- Rendering ----------------------
   return (
     <div
-      className={`w-full relative overflow-hidden lg:col-span-3 md:col-span-6 col-span-12 ${
-        height ? height : 'h-24'
+      className={`${props.widthFit ? '' : 'w-full'} relative overflow-hidden ${
+        props.height ? props.height : 'h-24'
       } bg-mainColor/50 backdrop-blur-md rounded-xl p-2 flex gap-2`}
     >
-      {showImage ? (
+      {props.showImage ? (
         <div className="rounded-lg bg-white aspect-square h-full overflow-hidden relative">
-          <Image src={audioDetails.posterPath} alt={audioDetails.title} layout="fill" objectFit="cover" />
+          <Image src={props.audioDetails.posterPath} alt={props.audioDetails.title} layout="fill" objectFit="cover" />
         </div>
       ) : null}
       <div className="flex flex-col flex-1 gap-2 text-white">
-        <span className="font-bold">{audioDetails?.title}</span>
+        <span className="font-bold">{props.audioDetails?.title}</span>
         <div className="flex items-center gap-1">
           <div className="grid place-content-center flex-1">
             <div ref={containerRef} style={!isReady ? { display: 'none' } : { display: 'flex' }} />
@@ -91,6 +122,12 @@ function Audio({ audioUrl, audioDetails, audioWidth, audioHeight, height, showIm
         <div className="z-50 absolute right-1/2 translate-x-1/2 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-xl w-full h-full flex items-center justify-center">
           <div className="loader"></div>
         </div>
+      ) : null}
+
+      {props.closeBtn ? (
+        <button className="absolute left-2 top-2 text-white" onClick={handleClose}>
+          <i className="ki-solid ki-cross"></i>
+        </button>
       ) : null}
     </div>
   );

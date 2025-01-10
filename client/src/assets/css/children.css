@@ -1,0 +1,26 @@
+body.children {
+  background-color: #9690e447;
+  /* background-color: rgb(223, 194, 221); */
+  /* #9690E4 */
+}
+
+/* body.children .children-header::before {
+  content: '';
+  background-image: url('/images/curve-bg.svg');
+  background-size: 100%;
+  position: absolute;
+  bottom: -5rem;
+  right: 0;
+  width: 100%;
+  height: 10rem;
+} */
+
+.mask {
+  mask-image: url('/images/curve-bg.svg');
+  mask-size: cover;
+  mask-position: center;
+}
+
+:root {
+  --children-color: #9690e4;
+}

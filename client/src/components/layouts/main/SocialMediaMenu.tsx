@@ -7,8 +7,9 @@ import { socialMediaItems } from '@/jsons/socialMediaItems';
 function SocialMediaMenu() {
   return (
     <div className="fixed left-0 top-32 flex flex-col items-center gap-4 text-2xl bg-mainColor/90 py-4 pe-2 ps-3 rounded-tr-lg rounded-br-lg text-white">
-      {socialMediaItems.map((social) => (
+      {socialMediaItems.map((social, index) => (
         <Whisper
+          key={index}
           placement="left"
           controlId="control-id-hover"
           trigger="hover"

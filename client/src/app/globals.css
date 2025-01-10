@@ -8,6 +8,9 @@
 }
 
 @layer components {
+  .btn-mainColor {
+    @apply bg-mainColor hover:bg-mainColor/90 transition-all text-white;
+  }
   .glass-back {
     @apply bg-white backdrop-blur-md;
   }

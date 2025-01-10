@@ -126,8 +126,23 @@ export class VideoService {
     }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} video`;
+  async findOne(id: number) {
+    try {
+      const video = await this.videoRepository.findOne({
+        where: { id },
+      });
+
+      if (!video) {
+        throw new HttpException('فایل موردنظر یافت نشد', HttpStatus.NOT_FOUND);
+      }
+
+      return {
+        video,
+        statusCode: HttpStatus.ACCEPTED,
+      };
+    } catch (error) {
+      throw new HttpException('مشکلی در دریافت فایل رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   update(id: number, updateVideoDto: UpdateVideoDto) {

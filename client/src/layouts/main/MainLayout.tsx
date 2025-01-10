@@ -32,7 +32,7 @@ function MainLayout({ children }: { children: ReactNode }) {
   }, [isLoading]);
 
   return (
-    <div className="pb-32">
+    <div className="pb-32 flex flex-col justify-between">
       <div className="container">
         <Header />
       </div>

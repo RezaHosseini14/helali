@@ -1,0 +1,10 @@
+@font-face {
+  font-family: gofteh;
+  font-style: normal;
+  font-weight: 900;
+  src: url("./woff2/GoftehFaNumWeb-Heavy.woff2") format("woff2");
+}
+
+.gofteh {
+  font-family: gofteh !important;
+}

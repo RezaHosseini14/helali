@@ -1,5 +1,5 @@
-import { PayloadAction, createSlice } from "@reduxjs/toolkit";
-import { audioTypes } from "types/audio.type";
+import { PayloadAction, createSlice } from '@reduxjs/toolkit';
+import { audioTypes } from 'types/audio.type';
 
 type audioInitialStateType = {
   audios: audioTypes[];
@@ -18,7 +18,7 @@ const initialState: audioInitialStateType = {
 };
 
 export const audioSlice = createSlice({
-  name: "audio",
+  name: 'audio',
   initialState,
   reducers: {
     SET_AUDIOS: (state, action: PayloadAction<audioTypes[]>) => {
