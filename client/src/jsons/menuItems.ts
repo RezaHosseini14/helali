@@ -6,23 +6,23 @@ export type MenuItemsType = {
 
 export const menuItems: MenuItemsType[] = [
   {
-    title: "لندینگ",
-    url: "/",
-    icon: "ki-home",
+    title: 'صفحه نخست',
+    url: '/',
+    icon: 'solar:home-2-bold-duotone',
   },
   {
-    title: "خانه",
-    url: "/home",
-    icon: "ki-category",
+    title: 'ویدیوها',
+    url: '/video',
+    icon: 'solar:videocamera-record-bold-duotone',
   },
   {
-    title: "صوت‌ها",
-    url: "/audio/1",
-    icon: "ki-abstract-45",
+    title: 'صوت‌ها',
+    url: '/audio',
+    icon: 'solar:music-note-bold-duotone',
   },
   {
-    title: "کاربر",
-    url: "/dashboard",
-    icon: "ki-user",
+    title: 'کاربر',
+    url: '/dashboard',
+    icon: 'solar:user-bold-duotone',
   },
 ];

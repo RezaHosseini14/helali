@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
 import { Table } from 'rsuite';
 
 // Functions
@@ -39,7 +38,6 @@ function CommentsListsPage() {
   });
 
   // ---------------------- Event Handlers ----------------------
-
   const handleChangeLimit = (dataKey: any) => {
     setPage(1);
     setLimit(dataKey);
@@ -104,41 +102,20 @@ function CommentsListsPage() {
               {(rowData) => (
                 <div className="flex items-center gap-2">
                   <>
-                    {(rowData.status === 'pending' || rowData.status === 'rejected') && (
-                      <>
-                        <IconButton
-                          className="create-btn"
-                          icon="ki-solid ki-check"
-                          onClick={() => handleChangeStatus('audio', rowData?.id, { newStatus: 'published' })}
-                          tooltipText="انتشار"
-                        />
-                        <IconButton
-                          disabled={true}
-                          className="trash-btn"
-                          icon="ki-solid ki-cross"
-                          onClick={() => handleChangeStatus('audio', rowData?.id, { newStatus: 'rejected' })}
-                          tooltipText="رد کردن"
-                        />
-                      </>
-                    )}
-
-                    {(rowData.status === 'pending' || rowData.status === 'published') && (
-                      <>
-                        <IconButton
-                          disabled={true}
-                          className="create-btn"
-                          icon="ki-solid ki-check"
-                          onClick={() => handleChangeStatus('audio', rowData?.id, { newStatus: 'published' })}
-                          tooltipText="انتشار"
-                        />
-                        <IconButton
-                          className="trash-btn"
-                          icon="ki-solid ki-cross"
-                          onClick={() => handleChangeStatus('audio', rowData?.id, { newStatus: 'rejected' })}
-                          tooltipText="رد کردن"
-                        />
-                      </>
-                    )}
+                    <IconButton
+                      className="create-btn"
+                      icon="ki-solid ki-check"
+                      onClick={() => handleChangeStatus('audio', rowData?.id, { newStatus: 'published' })}
+                      tooltipText="انتشار"
+                      disabled={rowData.status === 'published' ? true : false}
+                    />
+                    <IconButton
+                      className="trash-btn"
+                      icon="ki-solid ki-cross"
+                      onClick={() => handleChangeStatus('audio', rowData?.id, { newStatus: 'rejected' })}
+                      tooltipText="رد کردن"
+                      disabled={rowData.status === 'rejected' ? true : false}
+                    />
                   </>
                 </div>
               )}

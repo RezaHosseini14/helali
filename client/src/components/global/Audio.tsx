@@ -5,13 +5,13 @@ import { useWavesurfer } from '@wavesurfer/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
-//Types
+// Types
 import { audioTypes } from 'types/audio.type';
 
-//Slices
+// Slices
 import { SET_CURRENT_AUDIO_STATUS } from '@/redux/slices/audioSlice';
 
-//Functions
+// Functions
 import { formatTime } from 'utils/functions';
 
 export type AudioPropsTypes = {
@@ -53,8 +53,10 @@ function Audio(props: AudioPropsTypes) {
     if (wavesurfer) {
       if (wavesurfer.isPlaying()) {
         wavesurfer.pause();
+        dispatch(SET_CURRENT_AUDIO_STATUS(false));
       } else {
         wavesurfer.play();
+        dispatch(SET_CURRENT_AUDIO_STATUS(true));
       }
     }
   }, [wavesurfer]);
@@ -103,7 +105,7 @@ function Audio(props: AudioPropsTypes) {
           </div>
 
           <button onClick={onPlayPause} className="grid place-content-center text-white size-[33px] ">
-            {isPlaying ? (
+            {currentAudioStatus ? (
               <i className="ki-solid ki-row-vertical text-2xl"></i>
             ) : (
               <i className="ki-solid ki-to-right text-5xl"></i>

@@ -36,7 +36,7 @@ export type AudioFormValue = {
 
 function CreateAudioPage() {
   // ---------------------- State & References ----------------------
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<AudioFormValue>({
     title: '',
     text: '',

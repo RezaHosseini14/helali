@@ -6,9 +6,10 @@ type VideoPlayerProps = {
   src: string;
   controls?: boolean;
   poster?: string;
+  autoPlay?: boolean;
 };
 
-function VideoPlayer({ src, controls = true, poster }: VideoPlayerProps) {
+function VideoPlayer({ src, controls = true, poster, autoPlay = false }: VideoPlayerProps) {
   const videoHtmlTagRef = useRef<HTMLVideoElement>(null);
   const videoPlyrRef = useRef<Plyr | any>(null);
   const initVideo = () => {
@@ -26,6 +27,7 @@ function VideoPlayer({ src, controls = true, poster }: VideoPlayerProps) {
         controls={controls}
         ref={videoHtmlTagRef}
         src={src}
+        autoPlay={autoPlay}
       ></video>
     </>
   );

@@ -9,22 +9,6 @@ import { GalleryCommentsEntity } from './entities/galleryComments.entity';
 
 @Injectable()
 export class CommentsService {
-  private forbiddenWords: string[] = [
-    'کس',
-    'کس کش',
-    'کونی',
-    'جاکش',
-    'حرومزاده',
-    'بی ناموس',
-    'بیناموس',
-    'جنده',
-    'مادر جنده',
-    'مادر قحبه',
-    'بی پدر',
-    'کس پدر',
-    'زنازاده',
-    'حرومی',
-  ];
   constructor(
     @InjectRepository(AudioCommentsEntity)
     private audioCommentsRepository: Repository<AudioCommentsEntity>,
@@ -35,9 +19,6 @@ export class CommentsService {
     @InjectRepository(GalleryEntity)
     private galleryRepository: Repository<GalleryEntity>,
   ) {}
-  private containsForbiddenWords(text: string): boolean {
-    return this.forbiddenWords.some((word) => text.includes(word));
-  }
 
   async createAudioComment(createCommentDto: CreateCommentDto, audioId: number) {
     const audio = await this.audioRepository.findOne({
@@ -48,9 +29,6 @@ export class CommentsService {
       throw new HttpException('فایل موردنظر یافت نشد', HttpStatus.NOT_FOUND);
     }
 
-    if (this.containsForbiddenWords(createCommentDto.text)) {
-      throw new HttpException('کامنت شامل کلمات ناپسند است', HttpStatus.BAD_REQUEST);
-    }
     const newComment = this.audioCommentsRepository.create({
       author: createCommentDto.author,
       text: createCommentDto.text,
@@ -73,10 +51,6 @@ export class CommentsService {
 
     if (!gallery) {
       throw new HttpException('تصویر موردنظر یافت نشد', HttpStatus.NOT_FOUND);
-    }
-
-    if (this.containsForbiddenWords(createCommentDto.text)) {
-      throw new HttpException('کامنت شامل کلمات ناپسند است', HttpStatus.BAD_REQUEST);
     }
 
     const newComment = this.galleryCommentsRepository.create({

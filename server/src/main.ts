@@ -1,17 +1,24 @@
 import { NestFactory } from '@nestjs/core';
 import * as passport from 'passport';
-import { BadRequestException, Session, ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as cookieParser from 'cookie-parser';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './modules/app/app.module';
+import { ConfigService } from '@nestjs/config';
+import { SwaggerConfigInit } from './config/swagger.config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  //Config
+  const configServices = app.get(ConfigService);
+  const port = configServices.get('App.port');
+  const corsUrl = configServices.get('App.corsUrl');
+
   const corsOptions: CorsOptions = {
-    origin: 'http://localhost:3001',
+    origin: corsUrl,
     credentials: true,
   };
 
@@ -19,7 +26,6 @@ async function bootstrap() {
   app.enableCors(corsOptions);
   app.use(passport.initialize());
   app.use(cookieParser());
-
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -55,15 +61,11 @@ async function bootstrap() {
     }),
   );
 
-  const config = new DocumentBuilder()
-    .setTitle('Helali')
-    .setDescription('Helali App')
-    .setVersion('1.0')
-    .build();
+  //Swagger Config
+  SwaggerConfigInit(app);
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
-
-  await app.listen(3000, '0.0.0.0');
+  await app.listen(port, () => {
+    console.log(`app run in http://localhost:${port}`);
+  });
 }
 bootstrap();

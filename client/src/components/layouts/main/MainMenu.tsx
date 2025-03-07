@@ -1,8 +1,11 @@
 'use client';
 
-import { menuItems, MenuItemsType } from '@/jsons/menuItems';
 import Link from 'next/link';
 import { MouseEvent } from 'react';
+
+//jsons
+import { menuItems, MenuItemsType } from '@/jsons/menuItems';
+import { Icon } from '@iconify/react';
 
 function MainMenu() {
   const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -13,19 +16,19 @@ function MainMenu() {
     const parentRect = parent.getBoundingClientRect();
     const borderRect = element.getBoundingClientRect();
 
-    border.style.right = `${parentRect.right - borderRect.right}px`;
+    border.style.right = `${parentRect.right - borderRect.right + 3}px`;
   };
 
   return (
     <div
       id="parent"
-      className="tab-menue px-6 rounded-xl w-72 h-12 bg-white/70 z-50 !fixed bottom-4 right-1/2 translate-x-1/2 backdrop-blur-lg shadow-md"
+      className="tab-menue px-6 rounded-xl w-72 h-12 bg-white/70 z-50 !fixed bottom-4 right-1/2 translate-x-1/2 backdrop-blur-lg shadow-xl"
     >
       <ul className="flex items-center justify-around h-full text-2xl text-mainColor relative">
         {menuItems.map((item: MenuItemsType, index: number) => (
           <li key={index}>
             <Link href={item.url} onClick={(e: any) => handleClick(e)}>
-              <i className={`ki-solid ${item.icon}`}></i>
+              <Icon icon={item.icon} className="text-3xl" />
             </Link>
           </li>
         ))}

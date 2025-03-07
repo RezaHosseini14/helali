@@ -1,15 +1,28 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+  UploadedFiles,
+  UseGuards,
+} from '@nestjs/common';
 import { VideoService } from './video.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Pagination } from 'src/common/decorator/pagination.decorator';
+import { AuthGuard } from '../auth/guards/auth.guard';
 
 @Controller('video')
 export class VideoController {
   constructor(private readonly videoService: VideoService) {}
 
   @Post('upload')
+  @UseGuards(AuthGuard)
   @UseInterceptors(
     FileFieldsInterceptor([
       { name: 'file', maxCount: 1 },
@@ -24,13 +37,18 @@ export class VideoController {
       poster?: Express.Multer.File[];
     },
   ) {
-    const audioFile = files.file?.[0];
+    const videoFile = files.file?.[0];
     const posterFile = files.poster?.[0];
 
     const bucketName = 'video-bucket';
     const posterBucket = 'poster-bucket';
 
-    return await this.videoService.uploadFile(createAudioDto, bucketName, posterBucket, audioFile, posterFile);
+    return await this.videoService.uploadFile(createAudioDto, bucketName, posterBucket, videoFile, posterFile);
+  }
+
+  @Get('findAllStories')
+  findAllStories() {
+    return this.videoService.findAllStories();
   }
 
   @Get()
@@ -45,13 +63,15 @@ export class VideoController {
   }
 
   @Patch(':id')
+  @UseGuards(AuthGuard)
   update(@Param('id') id: string, @Body() updateVideoDto: UpdateVideoDto) {
     return this.videoService.update(+id, updateVideoDto);
   }
 
   @Delete(':id')
+  @UseGuards(AuthGuard)
   remove(@Param('id') id: string) {
-    const bucketName = 'audio-bucket';
+    const bucketName = 'video-bucket';
     const posterBucket = 'poster-bucket';
     return this.videoService.remove(+id, bucketName, posterBucket);
   }

@@ -1,7 +1,7 @@
 'use client';
 import React, { useRef, useState } from 'react';
 import { Button, Form } from 'rsuite';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
 //Functions
@@ -9,6 +9,9 @@ import { handleResponse } from 'utils/functions';
 
 //Model
 import { createVideoModel } from 'models/createVideo.model';
+
+//Types
+import { categoryType } from 'types/category.type';
 
 //Services
 import { uploadVideo } from 'services/video/videoServices';
@@ -18,31 +21,40 @@ import DashboardPanel from '@/components/global/DashboardPanel';
 import TexAreaField from '@/components/global/fields/TexAreaField';
 import TextField from '@/components/global/fields/TextField';
 import UploadField from '@/components/global/fields/UploadField';
+import TagField from '@/components/global/fields/TagField';
+import { allCategory } from 'services/category/categoryServices';
 
 type videoFormValue = {
   title: string;
   text?: string;
   file?: File | null;
   poster?: File | null;
+  categories?: categoryType[];
 };
 
 function CreateVideoPage() {
   // ---------------------- State and Ref ----------------------
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<videoFormValue>({
     title: '',
     text: '',
     file: null,
     poster: null,
+    categories: [],
   });
 
   // ---------------------- Mutations ----------------------
+  const { data, isLoading } = useQuery({
+    queryKey: ['allCategory'],
+    queryFn: () => allCategory(),
+  });
+
   const { mutateAsync, isPending } = useMutation({
     mutationFn: uploadVideo,
   });
 
   // ---------------------- Event Handlers ----------------------
-  const handleInputChange = (name: keyof videoFormValue, value: string) => {
+  const handleInputChange = (name: keyof videoFormValue, value: string | categoryType[]) => {
     setFormValue((prev) => ({
       ...prev,
       [name]: value,
@@ -66,6 +78,10 @@ function CreateVideoPage() {
       const formData = new FormData();
       formData.append('title', formValue.title);
       if (formValue.text) formData.append('text', formValue.text);
+      if (formValue.categories) {
+        //@ts-ignore
+        formData.append('categories', formValue.categories);
+      }
       if (formValue.file)
         //@ts-ignore
         formData.append('file', formValue.file.blobFile);
@@ -91,6 +107,20 @@ function CreateVideoPage() {
             value={formValue.title}
             onChange={(value: string) => handleInputChange('title', value)}
           />
+
+          <TagField
+            containerClassName="col-span-6"
+            data={data?.data.categories.map((category: categoryType) => ({
+              label: category.title,
+              value: category.id,
+            }))}
+            name="categories"
+            title="دسته‌بندی"
+            value={formValue.categories}
+            onChange={(value: categoryType[]) => handleInputChange('categories', value)}
+            loading={isLoading}
+          />
+
           <TexAreaField
             title="توضیحات (اختیاری)"
             name="text"

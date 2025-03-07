@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, use } from 'react';
 import { Button, Form, Tooltip, Uploader, Whisper } from 'rsuite';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -30,7 +30,8 @@ type FormfileValueType = {
   poster: string;
 };
 
-function UpdateAudioPage({ params }: { params: { id: string } }) {
+function UpdateAudioPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   // ---------------------- Data Fetching ----------------------
   const { data, isLoading } = useQuery({
     queryKey: ['allCategory'],
@@ -47,7 +48,7 @@ function UpdateAudioPage({ params }: { params: { id: string } }) {
   });
 
   // ---------------------- State and Ref ----------------------
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<AudioFormValue>({
     title: '',
     text: '',
@@ -183,7 +184,7 @@ function UpdateAudioPage({ params }: { params: { id: string } }) {
   // ---------------------- Rendering ----------------------
 
   return (
-    <DashboardPanel title="بروزرسانی فایل صوتی">
+    (<DashboardPanel title="بروزرسانی فایل صوتی">
       <LoaderProvider loading={isFetchingAudioById || isLoadingAudioById}>
         <Form model={createAudioModel} formValue={formValue} ref={formRef} fluid>
           <div className="grid grid-cols-12 gap-4 mb-4">
@@ -238,7 +239,7 @@ function UpdateAudioPage({ params }: { params: { id: string } }) {
                   />
                 </>
               ) : (
-                <Uploader
+                (<Uploader
                   title="فایل پوستر"
                   name="poster"
                   className="poster-uploader w-full"
@@ -261,7 +262,7 @@ function UpdateAudioPage({ params }: { params: { id: string } }) {
                       <i className="ki-solid ki-picture text-3xl"></i>
                     )}
                   </button>
-                </Uploader>
+                </Uploader>)
                 // <UploadField
                 //   name="poster"
                 //   title="فایل پوستر"
@@ -316,7 +317,7 @@ function UpdateAudioPage({ params }: { params: { id: string } }) {
           </Button>
         </Form>
       </LoaderProvider>
-    </DashboardPanel>
+    </DashboardPanel>)
   );
 }
 

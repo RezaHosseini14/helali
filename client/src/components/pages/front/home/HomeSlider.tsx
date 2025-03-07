@@ -48,7 +48,6 @@ function HomeSlider() {
 
       <div className="custom-pagination !w-fit bg-white/30 backdrop-blur-sm p-2 rounded-md absolute right-1/2 translate-x-1/2 bottom-4 z-50 flex items-center gap-2"></div>
 
-      {/* دکمه‌های ناوبری داخل Swiper */}
       <div className="absolute top-1/2 left-0 right-0 flex justify-between px-4 z-50">
         <button
           onClick={() => swiperRef.current?.slidePrev()}

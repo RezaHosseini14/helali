@@ -1,26 +1,38 @@
-import React from 'react';
+'use server';
 
-function DashboardPage() {
-  return (
-    <div className="grid grid-cols-12 grid-rows-12 gap-4 h-full">
-      <div className="section-style col-span-3 row-span-2 flex items-center gap-4">
-        <i className="ki-solid ki-user section-icon-style"></i>
-        <span className="font-bold text-xl">تعداد کاربران</span>
+import { cookies } from 'next/headers';
+
+// Components
+import DashboardItem from '@/components/pages/dashboard/DashboardItem';
+
+export default async function DashboardPage() {
+  try {
+    const accessToken = (await cookies()).get('accessToken')?.value;
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/all-data-count`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: 'no-store',
+    });
+
+    if (!res.ok) throw new Error('Failed to fetch data');
+
+    const data = await res.json();
+
+    return (
+      <div className="grid md:grid-cols-4 sm:grid-cols-3 xs:grid-cols-2 grid-cols-1 grid-rows-12 gap-4 h-full">
+        <DashboardItem icon="solar:users-group-two-rounded-bold-duotone" title="تعداد کاربران" count={data.users} />
+        <DashboardItem icon="solar:music-notes-bold-duotone" title="تعداد صوت‌ها" count={data.audios} />
+        <DashboardItem icon="solar:videocamera-record-bold-duotone" title="تعداد ویدیو‌ها" count={data.videos} />
+        <DashboardItem icon="solar:gallery-minimalistic-bold-duotone" title="تعداد تصاویر" count={data.galleries} />
+        <DashboardItem icon="solar:chat-line-bold-duotone" title="تعداد نظرات" count={data.comments} />
       </div>
-      <div className="section-style col-span-3 row-span-2 flex items-center gap-4">
-        <i className="ki-solid ki-abstract-45 section-icon-style"></i>
-        <span className="font-bold text-xl">تعداد صوت‌ها</span>
+    );
+  } catch (error) {
+    console.error('خطا در دریافت اطلاعات:', error);
+    return (
+      <div className="grid place-content-center h-full">
+        <p className="text-red-500">خطا در دریافت اطلاعات !!</p>
       </div>
-      <div className="section-style col-span-3 row-span-2 flex items-center gap-4">
-        <i className="ki-solid ki-abstract-31 section-icon-style"></i>
-        <span className="font-bold text-xl">تعداد ویدیو‌ها</span>
-      </div>
-      <div className="section-style col-span-3 row-span-2 flex items-center gap-4">
-        <i className="ki-solid ki-picture section-icon-style"></i>
-        <span className="font-bold text-xl">تعداد آلبوم‌ها</span>
-      </div>
-    </div>
-  );
+    );
+  }
 }
-
-export default DashboardPage;

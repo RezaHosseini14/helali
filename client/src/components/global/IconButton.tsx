@@ -1,4 +1,3 @@
-import React from 'react';
 import { Whisper, Tooltip } from 'rsuite';
 
 type IconButtonPropsType = {

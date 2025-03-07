@@ -33,7 +33,7 @@ function PasswordField(props: PasswordFieldType) {
           placeholder={props.placeholder}
         />
         <Button
-          className="size-8 absolute left-2 top-1/2 -translate-y-1/2"
+          className="size-8 !absolute left-2 top-1/2 -translate-y-1/2"
           appearance="default"
           onClick={handleToggleShow}
         >

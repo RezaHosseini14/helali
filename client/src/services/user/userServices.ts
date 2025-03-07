@@ -1,3 +1,4 @@
+import { jwtHttp } from 'services/config';
 import http from '../httpService';
 
 export function allUser(page?: number, limit?: number) {
@@ -19,4 +20,8 @@ export function allUser(page?: number, limit?: number) {
 
 export function deleteUser(id: number) {
   return http.delete(`/user/${id}`);
+}
+
+export function allDataCount() {
+  return jwtHttp.get('/user/all-data-count');
 }

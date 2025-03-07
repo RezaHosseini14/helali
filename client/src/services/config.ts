@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from 'axios';
 
 export const axiosJWT = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -7,17 +7,16 @@ export const axiosJWT = axios.create({
 
 axiosJWT.interceptors.request.use(
   async (config) => {
-    const currentDate = new Date();
-    const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/verifylogin`, {
+    const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/auth/refreshtoken`, {
       withCredentials: true,
     });
 
-    config.headers.authorization = `Bearer ${res.data.token}`;
+    config.headers.authorization = `Bearer ${res.data.accessToken}`;
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 export const jwtHttp = {

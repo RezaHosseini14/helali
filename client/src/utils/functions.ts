@@ -99,3 +99,56 @@ export const handleResponse = (
 
 export const formatTime = (seconds: number) =>
   [seconds / 60, seconds % 60].map((v) => `0${Math.floor(v)}`.slice(-2)).join(':');
+
+export const getRandomNumber = (min: number = 100, max: number = 1000): number => {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+};
+
+export const getAverageColor = (imageSrc: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = imageSrc;
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) return reject('Canvas not supported');
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0, img.width, img.height);
+
+      const imageData = ctx.getImageData(0, 0, img.width, img.height).data;
+      let r = 0,
+        g = 0,
+        b = 0,
+        count = 0;
+
+      for (let i = 0; i < imageData.length; i += 4) {
+        r += imageData[i];
+        g += imageData[i + 1];
+        b += imageData[i + 2];
+        count++;
+      }
+
+      r = Math.floor(r / count);
+      g = Math.floor(g / count);
+      b = Math.floor(b / count);
+
+      resolve(`rgb(${r}, ${g}, ${b})`);
+    };
+
+    img.onerror = reject;
+  });
+};
+
+export const darkenColor = (color: string, percent: number = 20) => {
+  const rgb = color.match(/\d+/g)?.map(Number);
+  if (!rgb) return color;
+
+  const darkened = rgb.map((c) => Math.max(0, c - (c * percent) / 100));
+
+  return `rgb(${darkened[0]}, ${darkened[1]}, ${darkened[2]})`;
+};

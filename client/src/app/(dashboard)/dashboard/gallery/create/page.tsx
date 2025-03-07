@@ -25,7 +25,7 @@ type GalleryFormValue = {
 
 function CreateGalleryPage() {
   // ---------------------- State and Ref ----------------------
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<GalleryFormValue>({
     desc: '',
     file: null,

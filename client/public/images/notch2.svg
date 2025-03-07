@@ -1,0 +1,17 @@
+<svg class="vitrin-slider2-button-next-shape" width="76" height="285" viewBox="0 0 76 285" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <g filter="url(#filter0_d_6_20)">
+                                        <path d="M6 275V10C6 86 62 91.0878 62 142.752C62 194.416 6 201 6 275Z" fill="white"></path>
+                                    </g>
+                                    <defs>
+                                        <filter id="filter0_d_6_20" x="0" y="0" width="76" height="285" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+                                            <feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood>
+                                            <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"></feColorMatrix>
+                                            <feOffset dx="4"></feOffset>
+                                            <feGaussianBlur stdDeviation="5"></feGaussianBlur>
+                                            <feComposite in2="hardAlpha" operator="out"></feComposite>
+                                            <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0"></feColorMatrix>
+                                            <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_6_20"></feBlend>
+                                            <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_6_20" result="shape"></feBlend>
+                                        </filter>
+                                    </defs>
+                                </svg>

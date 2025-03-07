@@ -36,7 +36,7 @@
     @apply bg-maincolor rounded-xl p-2;
   }
   .section-icon-style {
-    @apply h-full aspect-square rounded-2xl text-white bg-mainstructure text-center text-3xl grid place-content-center;
+    @apply size-16 p-2 rounded-2xl text-white bg-mainstructure text-center grid place-content-center;
   }
 }
 
@@ -78,3 +78,37 @@
   height: 100% !important;
 }
 /* plyr end */
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(90deg, #dfe3ec 25%, #dfe3ecbb 50%, #dfe3ec 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite linear;
+  border-radius: 1rem;
+}
+
+.skeleton-text {
+  width: 80%;
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeleton-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  width: 100%;
+  height: 100%;
+}

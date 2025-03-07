@@ -16,7 +16,6 @@ function ImagePlayer(props: ImagePlayerPropsType) {
       document.body.classList.remove('overflow-hidden');
     };
   }, []);
-  console.log(props);
 
   return (
     <AnimatePresence mode="wait">

@@ -1,20 +1,21 @@
 import React, { useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Button, Form, Placeholder } from 'rsuite';
+import { Button, Form } from 'rsuite';
 import toast from 'react-hot-toast';
 
 // Services
 import { addAudioComment, allAudioCommentsById } from 'services/audio/audioServices';
 
-//model
+// Models
 import { commentModel } from 'models/comment.model';
+
+// Types
+import { commentType } from 'types/comment.type';
 
 // Components
 import TexAreaField from '@/components/global/fields/TexAreaField';
 import TextField from '@/components/global/fields/TextField';
-
-// Types
-import { commentType } from 'types/comment.type';
+import CommentsLoading from './CommentsLoading';
 
 type CommentFormValueType = {
   author: string;
@@ -23,7 +24,7 @@ type CommentFormValueType = {
 
 function CommentsBox({ id }: { id: number }) {
   // ---------------------- State & Hooks ----------------------
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<CommentFormValueType>({
     author: '',
     text: '',
@@ -59,9 +60,9 @@ function CommentsBox({ id }: { id: number }) {
         id,
         body: formValue,
       });
-      refetch(); // Refresh comments list
+      refetch();
       toast.success('دیدگاه با موفقیت اضافه شد');
-      setFormValue({ author: '', text: '' }); // Reset form
+      setFormValue({ author: '', text: '' });
     } catch (error) {
       toast.error('خطا در ارسال دیدگاه');
     }
@@ -69,9 +70,8 @@ function CommentsBox({ id }: { id: number }) {
 
   return (
     <div>
-      {/* Form: Add a new comment */}
       {isLoading ? (
-        <Placeholder.Graph active className="rounded-xl w-full !h-80" />
+        <></>
       ) : (
         <Form model={commentModel} formValue={formValue} ref={formRef} fluid className="bg-mainColor/30 p-4 rounded-xl">
           <div className="grid grid-cols-12 gap-2 mb-4">
@@ -98,14 +98,8 @@ function CommentsBox({ id }: { id: number }) {
         </Form>
       )}
 
-      {/* Comments List */}
-
       {isLoading ? (
-        <div className="flex flex-col gap-4 mt-4">
-          <Placeholder.Graph active className="rounded-xl w-full !h-32" />
-          <Placeholder.Graph active className="rounded-xl w-full !h-32" />
-          <Placeholder.Graph active className="rounded-xl w-full !h-32" />
-        </div>
+        <CommentsLoading />
       ) : (
         <div className="flex flex-col gap-4 mt-4">
           {data?.data?.comments.length > 0 &&

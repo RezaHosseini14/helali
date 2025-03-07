@@ -1,28 +1,37 @@
 'use client';
 
-import { TOGGLE_SIDEBAR, TOGGLE_DARK_MODE } from '@/redux/slices/styleSlice';
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from '@/redux/store';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { Button, Tooltip, Whisper } from 'rsuite';
+
+// Services
 import { logout } from 'services/auth/authServices';
-import { useRouter } from 'next/navigation';
-import { Button } from 'rsuite';
+
+// Store
+import { RootState } from '@/redux/store';
+import { TOGGLE_SIDEBAR, TOGGLE_DARK_MODE } from '@/redux/slices/styleSlice';
+import { Icon } from '@iconify/react';
 
 function Header() {
   const dispatch = useDispatch();
   const { darkMode } = useSelector((state: RootState) => state.style);
-
   const router = useRouter();
   const { user } = useSelector((state: RootState) => state.user);
+
+  // ---------------------- State and Ref ----------------------
   const [enable, setEnable] = useState<boolean>(false);
+
+  // ---------------------- Data Fetching ----------------------
   const {} = useQuery({
     queryKey: ['logout'],
     queryFn: logout,
     enabled: enable,
   });
 
+  // ---------------------- Event Handlers ----------------------
   const handleLogout = () => {
     setEnable((prev) => !prev);
     router.push('/');
@@ -44,16 +53,23 @@ function Header() {
       </div>
       <div className="flex items-center gap-4">
         <button className="dashboard-header-item" onClick={handleToggleDarkMode}>
-          {darkMode ? <i className="ki-solid ki-sun"></i> : <i className="ki-solid ki-moon"></i>}
+          <Icon icon={darkMode ? 'solar:sun-bold-duotone' : 'solar:moon-bold-duotone'} fontSize={25} />
         </button>
 
         <button className="dashboard-header-item" onClick={handleLogout}>
-          <i className="ki-solid ki-exit-left"></i>
+          <Whisper
+            placement="bottom"
+            controlId="control-id-hover"
+            trigger="hover"
+            speaker={<Tooltip>خروج</Tooltip>}
+          >
+            <Icon icon="solar:logout-2-bold-duotone" fontSize={25} />
+          </Whisper>
         </button>
 
         <div className="group relative">
           <button className=" dashboard-header-item">
-            <i className="ki-solid ki-user"></i>
+            <Icon icon="solar:user-bold-duotone" fontSize={25} />
           </button>
 
           <div className="!text-black group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 translate-y-4 opacity-0 invisible absolute left-0 top-12 bg-white/20 backdrop-blur-xl shadow-lg border border-white/20 w-56 h-fit rounded-xl p-4 transition-all z-50">
@@ -78,7 +94,7 @@ function Header() {
                   onClick={handleLogout}
                 >
                   <span>خروج</span>
-                  <i className="ki-solid ki-exit-left"></i>
+                  <Icon icon="solar:logout-2-bold-duotone" fontSize={25} />
                 </Button>
               </li>
             </ul>

@@ -1,25 +1,25 @@
 'use client';
 
-import { RootState } from '@/redux/store';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { RootState } from '@/redux/store';
 import { useSelector } from 'react-redux';
 import { Tooltip, Whisper } from 'rsuite';
 import { motion } from 'framer-motion';
+import { Icon } from '@iconify/react';
+
 // Jsons
 import { dashboardMenuItems } from '@/jsons/dashboardMenuItems';
 
 function Sidebar() {
-  const [MenueItemActive, setMenueItemActive] = useState<number>(() => {
-    return parseInt(localStorage.getItem('activeMenu') || '0');
-  });
-  const [ActiveChild, setActiveChild] = useState<string | null>(() => {
-    return localStorage.getItem('activeChild') || null;
-  });
-
   const { sidebarStatus } = useSelector((state: RootState) => state.style);
 
-  const showChildren = (index: number) => {
+  // ---------------------- State and Ref ----------------------
+  const [MenueItemActive, setMenueItemActive] = useState<number>(0);
+  const [ActiveChild, setActiveChild] = useState<string | null>(null);
+
+  // ---------------------- Event Handlers ----------------------
+  const handleShowChildren = (index: number) => {
     setMenueItemActive(index);
     localStorage.setItem('activeMenu', index.toString());
     localStorage.removeItem('activeChild');
@@ -31,18 +31,12 @@ function Sidebar() {
     localStorage.setItem('activeChild', childUrl);
   };
 
+  // ---------------------- useEffect ----------------------
   useEffect(() => {
-    const storedActiveMenu = localStorage.getItem('activeMenu');
-    if (storedActiveMenu) {
-      setMenueItemActive(parseInt(storedActiveMenu));
-    }
-
-    const storedActiveChild = localStorage.getItem('activeChild');
-    if (storedActiveChild) {
-      setActiveChild(storedActiveChild);
-    }
+    setMenueItemActive(parseInt(localStorage.getItem('activeMenu') || '0'));
+    setActiveChild(localStorage.getItem('activeChild') || null);
   }, []);
-
+  
   const menuVariants = {
     hidden: { opacity: 0, x: 50 },
     visible: {
@@ -76,12 +70,14 @@ function Sidebar() {
             speaker={<Tooltip>{item.title}</Tooltip>}
           >
             <button
-              onClick={() => showChildren(index)}
+              onClick={() => handleShowChildren(index)}
               className={`grid place-content-center size-12 rounded-2xl text-xl ${
                 MenueItemActive === index ? 'bg-maincolor text-white' : ''
               }`}
             >
-              <i className={`ki-solid ki-${item.icon}`}></i>
+              {/* <i className={`ki-solid ki-${item.icon}`}></i> */}
+
+              <Icon icon={item.icon} fontSize={30} />
             </button>
           </Whisper>
         ))}
@@ -115,7 +111,8 @@ function Sidebar() {
                       : 'hover:text-maincolor cursor-pointer hover:bg-maincolor hover:!text-white'
                   }`}
                 >
-                  <i className={`ki-solid ki-${child.icon} text-xl`}></i>
+                  {/* <i className={`ki-solid ki-${child.icon} text-xl`}></i> */}
+                  <Icon icon={child.icon} fontSize={30} />
                   <span className="text-base">{child.title}</span>
                 </Link>
               </motion.li>

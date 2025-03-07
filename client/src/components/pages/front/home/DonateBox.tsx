@@ -10,7 +10,7 @@ type donateFormValue = {
 };
 
 function DonateBox() {
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<donateFormValue>({
     name: '',
     price: null,

@@ -18,7 +18,7 @@ import { categoryById, updateCategoryById } from 'services/category/categoryServ
 import TextField from '@/components/global/fields/TextField';
 
 function UpdateCategoryModal(props: CreateCategoryPropsType & { id: number }) {
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<CategoryFormValue>({
     title: '',
     sort: 0,

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+
+// Css
 import '../globals.css';
 import '@/assets/css/style.css';
 import '@/assets/fonts/keenicons/icon.css';

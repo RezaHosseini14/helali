@@ -30,7 +30,7 @@ export type CategoryFormValue = {
 };
 
 function CreateCategoryModal(props: CreateCategoryPropsType) {
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<CategoryFormValue>({
     title: '',
     sort: 0,

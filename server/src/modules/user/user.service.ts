@@ -6,12 +6,21 @@ import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
 import { Repository } from 'typeorm';
+import { VideoEntity } from '../video/entities/video.entity';
+import { AudioEntity } from '../audio/entities/audio.entity';
+import { GalleryEntity } from '../gallery/entities/gallery.entity';
+import { AudioCommentsEntity } from '../comments/entities/audioComment.entity';
+import { GalleryCommentsEntity } from '../comments/entities/galleryComments.entity';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(UserEntity)
-    private userRepository: Repository<UserEntity>,
+    @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
+    @InjectRepository(VideoEntity) private videoRepository: Repository<VideoEntity>,
+    @InjectRepository(AudioEntity) private audioRepository: Repository<AudioEntity>,
+    @InjectRepository(GalleryEntity) private galleryRepository: Repository<GalleryEntity>,
+    @InjectRepository(AudioCommentsEntity) private AudioCommentsRepository: Repository<AudioCommentsEntity>,
+    @InjectRepository(GalleryCommentsEntity) private GalleryCommentsRepository: Repository<GalleryCommentsEntity>,
   ) {}
 
   async findAll(limit: number, page: number) {
@@ -96,5 +105,22 @@ export class UserService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async allDataCount() {
+    const [users, usersCount] = await this.userRepository.findAndCount();
+    const [audios, audiosCount] = await this.audioRepository.findAndCount();
+    const [videos, videosCount] = await this.videoRepository.findAndCount();
+    const [galleries, galleriesCount] = await this.galleryRepository.findAndCount();
+    const [AudioComments, AudioCommentsCount] = await this.AudioCommentsRepository.findAndCount();
+    const [GalleryComments, GalleryCommentsCount] = await this.GalleryCommentsRepository.findAndCount();
+
+    return {
+      users: usersCount,
+      audios: audiosCount,
+      videos: videosCount,
+      galleries: galleriesCount,
+      comments: GalleryCommentsCount + AudioCommentsCount,
+    };
   }
 }

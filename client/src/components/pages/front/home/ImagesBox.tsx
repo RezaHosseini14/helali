@@ -1,6 +1,5 @@
 'use client';
 import { useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import Panel from '@/components/global/Panel';
 import ReactDOM from 'react-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -13,12 +12,9 @@ import 'swiper/css';
 import { imageType } from 'types/image.type';
 
 // Components
-const ImageWithLoader = dynamic(() => import('@/components/global/ImageWithLoader'), {
-  ssr: false,
-});
-const ImagePlayer = dynamic(() => import('@/components/global/ImagePlayer'), {
-  ssr: false,
-});
+import ImageWithLoader from '@/components/global/ImageWithLoader';
+import ImagePlayer from '@/components/global/ImagePlayer';
+import { Icon } from '@iconify/react';
 
 function ImagesBox({ images }: { images: imageType[] }) {
   const swiperRef = useRef<SwiperType | null>(null);
@@ -43,7 +39,12 @@ function ImagesBox({ images }: { images: imageType[] }) {
   };
 
   return (
-    <Panel title="تصاویر" fill icon="ki-solid ki-picture" moreButton={{ url: '/gallery' }}>
+    <Panel
+      title="تصاویر"
+      fill
+      icon={<Icon icon="solar:gallery-minimalistic-bold-duotone" width="24" height="24" />}
+      moreButton={{ url: '/gallery' }}
+    >
       {images?.length > 0 ? (
         <>
           <Swiper

@@ -7,7 +7,7 @@ export default function NotFound() {
       <div className="flex flex-col justify-center items-center h-full !z-50 relative">
         <h1 className="text-8xl font-bold">404</h1>
         <p className="text-lg border-b pb-4 mb-4">متاسفانه صفحه مورد نظر یافت نشد</p>
-        <Link href="/home" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <i className="ki-solid ki-arrow-right"></i>
           <span>بازگشت به صفحه اصلی</span>
         </Link>
@@ -24,7 +24,7 @@ export default function NotFound() {
       <h1 className="text-5xl font-bold">404</h1>
       <p className="text-sm">متاسفانه صفحه مورد نظر یافت نشد</p>
     </div>
-    <Link href="/home" className="text-white flex items-center gap-2">
+    <Link href="/" className="text-white flex items-center gap-2">
       <i className="ki-solid ki-arrow-right"></i>
       <span>بازگشت به صفحه اصلی</span>
     </Link>

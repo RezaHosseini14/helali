@@ -30,7 +30,7 @@ export type RegisterFormValue = {
 };
 
 function CreateUserPage() {
-  const formRef = useRef<any>();
+  const formRef = useRef<any>(undefined);
   const [formValue, setFormValue] = useState<RegisterFormValue>({
     username: '',
     password: '',

@@ -1,21 +1,20 @@
 import ImageWithLoader from '@/components/global/ImageWithLoader';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
 //Types
-import { audioTypes } from 'types/audio.type';
+import { videoTypes } from 'types/video.type';
 
 //Components
-const Panel = dynamic(() => import('@/components/global/Panel'), {
-  ssr: false,
-});
+import Panel from '@/components/global/Panel';
+import { Icon } from '@iconify/react';
+import PlayIcon from '@/components/global/icons/PlayIcon';
 
-function VideosBox({ videos }: { videos: audioTypes[] }) {
+function VideosBox({ videos }: { videos: videoTypes[] }) {
   return (
     <Panel
       title="ویدیو"
       fill
-      icon="ki-solid ki-abstract-31"
+      icon={<Icon icon="solar:videocamera-record-bold-duotone" width="24" height="24" />}
       className="py-8"
       container
       dark
@@ -23,14 +22,16 @@ function VideosBox({ videos }: { videos: audioTypes[] }) {
     >
       <div className="grid grid-cols-12 grid-rows-12 gap-4 h-[30rem] container">
         {videos?.length > 0 ? (
-          videos?.map((video) => (
+          videos?.slice(-4).map((video) => (
             <Link
+              key={video.id}
               href={`/video/${video.id}`}
-              className="group relative rounded-xl !overflow-hidden lg:first-of-type:!col-span-9 first-of-type:!row-span-12 first-of-type:!col-span-12 lg:col-span-3 md:col-span-4 row-span-4 col-span-12 sm:col-span-6"
+              className="group relative rounded-xl !overflow-hidden 
+              lg:first-of-type:!col-span-9 lg:first-of-type:!row-span-12 lg:col-span-3 lg:row-span-4 
+              md:first-of-type:!col-span-12 md:first-of-type:!row-span-9 md:col-span-4 md:row-span-3
+              first-of-type:!col-span-12 first-of-type:!row-span-6 row-span-3 col-span-6"
             >
-              <div className="group-hover:scale-125 transition-transform bg-mainColor/70 backdrop-blur-md size-16 grid place-content-center text-4xl right-1/2 top-1/2 translate-x-1/2 -translate-y-1/2 z-10 absolute rounded-full shadow-sm">
-                <i className="ki-solid ki-to-right"></i>
-              </div>
+              <PlayIcon />
               <ImageWithLoader
                 className="object-scale-down w-full h-full aspect-video"
                 src={video.posterPath}

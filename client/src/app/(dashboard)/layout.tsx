@@ -1,11 +1,15 @@
-import DashboardLayout from '@/layouts/dashboard/DashboardLayout';
-import dynamic from 'next/dynamic';
 import type { Metadata } from 'next';
+
+// Css
 import '@/assets/css/dashboard.css';
 
-const RsuiteProviderDashboard = dynamic(() => import('providers/RsuiteProviderDashboard'), { ssr: false });
-const FadeProvider = dynamic(() => import('providers/FadeProvider'), { ssr: false });
-const ThemeProvider = dynamic(() => import('providers/ThemeProvider'), { ssr: false });
+// Providers
+import RsuiteProviderDashboard from 'providers/RsuiteProviderDashboard';
+import ThemeProvider from 'providers/ThemeProvider';
+import FadeProvider from 'providers/FadeProvider';
+
+// Layouts
+import DashboardLayout from '@/layouts/dashboard/DashboardLayout';
 
 export const metadata: Metadata = {
   title: 'داشبورد',

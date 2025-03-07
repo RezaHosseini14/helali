@@ -1,10 +1,14 @@
 import MainLayout from '@/layouts/main/MainLayout';
-import dynamic from 'next/dynamic';
 import type { Metadata } from 'next';
-import AudioPlayer from '@/components/global/AudioPlayer';
+
+//Css
 import '@/assets/css/main.css';
 
-const RsuiteProvider = dynamic(() => import('providers/RsuiteProvider'), { ssr: false });
+//Providers
+import RsuiteProvider from 'providers/RsuiteProvider';
+
+//Components
+import AudioPlayer from '@/components/global/AudioPlayer';
 
 export const metadata: Metadata = {
   title: 'پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی',
@@ -14,7 +18,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl">
-      <body className='front'>
+      <body>
         <RsuiteProvider>
           <MainLayout>{children}</MainLayout>
           <AudioPlayer />

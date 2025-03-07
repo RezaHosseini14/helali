@@ -4,7 +4,8 @@ import { UpdateVideoDto } from './dto/update-video.dto';
 import { MinioService } from '../minio/minio.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { VideoEntity } from './entities/video.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { CategoryEntity } from '../category/entities/category.entity';
 
 @Injectable()
 export class VideoService {
@@ -12,36 +13,50 @@ export class VideoService {
     private readonly minioService: MinioService,
     @InjectRepository(VideoEntity)
     private videoRepository: Repository<VideoEntity>,
+    @InjectRepository(CategoryEntity)
+    private categoryRepository: Repository<CategoryEntity>,
   ) {}
   async uploadFile(
-    createAudioDto: CreateVideoDto,
+    createVideoDto: CreateVideoDto,
     bucketName: string,
     posterBucket: string,
-    audioFile: Express.Multer.File,
+    videoFile: Express.Multer.File,
     posterFile: Express.Multer.File,
   ) {
     try {
-      // if (audioFile.mimetype !== 'audio/mpeg') {
-      //   throw new HttpException('فایل صوتی باید mp3 باشد', HttpStatus.BAD_REQUEST);
+      // if (!videoFile.mimetype.startsWith('video/')) {
+      //   throw new HttpException('فایل ویدیو باید یک فرمت ویدیویی معتبر باشد', HttpStatus.BAD_REQUEST);
       // }
 
-      // if (!posterFile.mimetype.startsWith('image/')) {
-      //   throw new HttpException('فایل پوستر باید تصویر باشد', HttpStatus.BAD_REQUEST);
-      // }
+      if (!posterFile.mimetype.startsWith('image/')) {
+        throw new HttpException('فایل پوستر باید تصویر باشد', HttpStatus.BAD_REQUEST);
+      }
 
-      const { title, text } = createAudioDto;
+      const { title, text, categories } = createVideoDto;
 
-      const audioExtension = audioFile.originalname.split('.').pop();
-      const audioTimestamp = Date.now();
-      const newAudioFileName = `${audioTimestamp}.${audioExtension}`;
-
-      await this.minioService.uploadFile(bucketName, {
-        ...audioFile,
-        originalname: newAudioFileName,
+      // دریافت دسته‌بندی‌ها از دیتابیس بر اساس ID
+      const videoCategories = await this.categoryRepository.findBy({
+        id: In(categories),
       });
 
-      const audioPath = `http://${process.env.MINIO_URL}:${process.env.MINIO_PORT}/${bucketName}/${newAudioFileName}`;
+      // بررسی معتبر بودن دسته‌بندی‌ها
+      if (videoCategories.length !== categories.length) {
+        throw new HttpException('دسته‌بندی‌های وارد شده معتبر نیستند', HttpStatus.BAD_REQUEST);
+      }
 
+      // آپلود ویدیو
+      const videoExtension = videoFile.originalname.split('.').pop();
+      const videoTimestamp = Date.now();
+      const newVideoFileName = `${videoTimestamp}.${videoExtension}`;
+
+      await this.minioService.uploadFile(bucketName, {
+        ...videoFile,
+        originalname: newVideoFileName,
+      });
+
+      const videoPath = `http://${process.env.MINIO_URL}:${process.env.MINIO_PORT}/${bucketName}/${newVideoFileName}`;
+
+      // آپلود پوستر
       const posterExtension = posterFile.originalname.split('.').pop();
       const posterTimestamp = Date.now();
       const newPosterFileName = `${posterTimestamp}.${posterExtension}`;
@@ -53,21 +68,23 @@ export class VideoService {
 
       const posterPath = `http://${process.env.MINIO_URL}:${process.env.MINIO_PORT}/${posterBucket}/${newPosterFileName}`;
 
-      const audio = this.videoRepository.create({
+      // ایجاد و ذخیره ویدیو در دیتابیس
+      const video = this.videoRepository.create({
         title,
         text,
-        path: audioPath,
+        path: videoPath,
         posterPath: posterPath,
-        originalName: newAudioFileName,
+        originalName: newVideoFileName,
         posterOriginalName: newPosterFileName,
-        size: audioFile.size.toString(),
+        size: videoFile.size.toString(),
         posterSize: posterFile.size.toString(),
-        mimetype: audioFile.mimetype,
+        mimetype: videoFile.mimetype,
         posterMimetype: posterFile.mimetype,
+        categories: videoCategories,
       });
 
-      const saveAudio = await this.videoRepository.save(audio);
-      if (saveAudio) {
+      const saveVideo = await this.videoRepository.save(video);
+      if (saveVideo) {
         return {
           message: 'فایل‌ها با موفقیت آپلود شدند',
           statusCode: HttpStatus.CREATED,
@@ -79,19 +96,17 @@ export class VideoService {
     }
   }
 
-  async findAllVideos(page: number = 1, limit: number = 100) {
+  async findAllVideos(page?: number, limit?: number) {
     try {
-      if (!page || !limit) {
+      if (!limit) {
         const [videos, total] = await this.videoRepository.findAndCount({
           order: {
             title: 'DESC',
           },
         });
-
         if (videos.length <= 0) {
           throw new HttpException('فایلی یافت نشد', HttpStatus.NOT_FOUND);
         }
-
         return {
           videos,
           total,
@@ -100,23 +115,21 @@ export class VideoService {
           statusCode: HttpStatus.OK,
         };
       }
-
+      const currentPage = page && page > 0 ? page : 1;
       const [videos, total] = await this.videoRepository.findAndCount({
         order: {
           title: 'DESC',
         },
-        skip: (page - 1) * limit,
+        skip: currentPage ? (currentPage - 1) * limit : 0,
         take: limit,
       });
-
       if (videos.length <= 0) {
         throw new HttpException('فایلی یافت نشد', HttpStatus.NOT_FOUND);
       }
-
       return {
         videos,
         total,
-        page,
+        page: currentPage,
         lastPage: Math.ceil(total / limit),
         statusCode: HttpStatus.ACCEPTED,
       };
@@ -170,6 +183,34 @@ export class VideoService {
     } catch (error) {
       console.error('خطا در حذف فایل:', error);
       throw new HttpException('مشکلی در حذف فایل رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async findAllStories() {
+    try {
+      const stories = await this.videoRepository
+        .createQueryBuilder('video')
+        .innerJoin('video.categories', 'category')
+        .where('category.title = :categoryTitle', { categoryTitle: 'reels' })
+        .select([
+          'video.title',
+          'video.originalName',
+          'video.path',
+          'video.mimetype',
+          'video.text',
+          'video.posterOriginalName',
+          'video.posterPath',
+          'video.created_at',
+        ])
+        .getMany();
+
+      if (stories.length <= 0) {
+        throw new HttpException('فایلی یافت نشد', HttpStatus.NOT_FOUND);
+      }
+      return { stories, statusCode: HttpStatus.OK };
+    } catch (error) {
+      console.error(error);
+      throw new HttpException('مشکلی در دریافت ویدیوها رخ داد', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

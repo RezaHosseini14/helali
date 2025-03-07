@@ -12,7 +12,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        mainbackground: 'var(mainbackground)',
+        mainbackground: 'var(--mainbackground)',
         dashboardbackground: 'rgb(var(--background))',
         foreground: 'var(--foreground)',
         mainColor: '#093537',
@@ -24,6 +24,8 @@ const config: Config = {
 
         //children color
         childrencolor: '#9690E4',
+        childrencolordarker: '#7B5CDC',
+        childrenbackgroundcolor: '#f9f9f9',
       },
       boxShadow: {
         mainshadow: '0 10px 40px -23px #093537',
@@ -38,6 +40,9 @@ const config: Config = {
           xl: '3rem',
           '2xl': '4rem',
         },
+      },
+      screens: {
+        xs: '500px',
       },
     },
   },

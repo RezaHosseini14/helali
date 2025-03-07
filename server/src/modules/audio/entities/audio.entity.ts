@@ -1,15 +1,6 @@
 import { CategoryEntity } from 'src/modules/category/entities/category.entity';
 import { AudioCommentsEntity } from 'src/modules/comments/entities/audioComment.entity';
-import {
-  Column,
-  Entity,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  OneToMany,
-  ManyToOne,
-  JoinTable,
-  ManyToMany,
-} from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, OneToMany, JoinTable, ManyToMany } from 'typeorm';
 
 @Entity('audio')
 export class AudioEntity {

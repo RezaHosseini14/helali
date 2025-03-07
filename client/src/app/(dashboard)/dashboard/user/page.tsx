@@ -7,13 +7,13 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/redux/store';
 import toast from 'react-hot-toast';
 
-//Functions
+// Functions
 import { handleResponse, shamsi } from 'utils/functions';
 
-//Services
+// Services
 import { allUser, deleteUser } from 'services/user/userServices';
 
-//Components
+// Components
 import ConfirmModal from '@/components/global/ConfirmModal';
 import IconButton from '@/components/global/IconButton';
 import TablePagination from '@/components/global/TablePagination';
@@ -26,7 +26,7 @@ function UserPage() {
   const { user } = useSelector((state: RootState) => state.user);
 
   // ---------------------- State and Ref ----------------------
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [showConfirm, setShowConfirm] = useState<boolean>(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [limit, setLimit] = useState<number>(10);
   const [page, setPage] = useState<number>(1);

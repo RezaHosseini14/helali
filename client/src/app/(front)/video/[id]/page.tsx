@@ -1,4 +1,5 @@
 'use client';
+
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
@@ -22,12 +23,14 @@ export default function VideoPage() {
 
   // ---------------------- Rendering ----------------------
   return (
-    <div className="grid grid-cols-12 gap-8 mt-16 container">
-      <div className="col-span-9 w-full flex flex-col gap-8">
+    <div className="grid grid-cols-12 gap-8 mt-8 container">
+      <div className="lg:col-span-9 col-span-12 w-full flex flex-col gap-8">
         <VideoDetails video={data?.data?.video} isLoading={isLoading} />
         <CommentsBox id={Number(id)} />
       </div>
-      <VideoSuggests />
+      <div className="lg:col-span-3 col-span-12">
+        <VideoSuggests />
+      </div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { axiosJWT } from 'services/config';
 import http from '../httpService';
 
 export function allVideo(page?: number, limit?: number) {
@@ -18,13 +19,17 @@ export function allVideo(page?: number, limit?: number) {
 }
 
 export function uploadVideo(body: any) {
-  return http.post('/video/upload', body);
+  return axiosJWT.post('/video/upload', body);
 }
 
 export function deleteVideo(id: number) {
-  return http.delete(`/video/${id}`);
+  return axiosJWT.delete(`/video/${id}`);
 }
 
 export function videoById(id: number) {
   return http.get(`/video/${id}`);
+}
+
+export function allStories() {
+  return http.get('/video/findAllStories');
 }

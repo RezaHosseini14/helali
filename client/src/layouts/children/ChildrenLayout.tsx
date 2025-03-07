@@ -1,18 +1,47 @@
+'use client';
 import { ReactNode } from 'react';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+
+// Components
+import StarrySky from '@/components/StarrySky';
+import ChildrenAlbum from '@/components/pages/children/ChildrenAlbum';
+import ChildrenAudios from '@/components/pages/children/ChildrenAudios';
+import ChildrenGallery from '@/components/pages/children/ChildrenGallery';
+import ChildrenHeader from '@/components/layouts/children/ChildrenHeader';
 
 function ChildrenLayout({ children }: { children: ReactNode }) {
   return (
-    <div>
-      <div className="flex flex-col drop-shadow-2xl">
-        <div className=" w-full h-40 bg-white/70 backdrop-blur-md">
-          <h1 className="potk font-bold text-7xl text-center text-childrencolor">عزیزم حسین (ع)</h1>
-        </div>
-        <div className="children-header w-full h-36 bg-white/70 backdrop-blur-md mask rotate-180"></div>
+    <div className="flex flex-col gap-16">
+      <ChildrenHeader />
+
+      <div className="container relative">
+        <motion.div
+          animate={{
+            y: [0, -10, 0],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute -right-4 "
+        >
+          <Image src="/images/children/start.png" width={200} height={200} alt="start" />
+        </motion.div>
+        <ChildrenAudios />
       </div>
 
-      <div className="container">
-        <div className="bg-childrencolor rounded-3xl shadow-xl shadow-violet-300 h-96 w-full"></div>
+      <ChildrenAlbum />
+
+      <StarrySky className="">
+        <div className="absolute right-0 z-[1000]">asfgasf</div>
+      </StarrySky>
+
+      <div className="cloud-pattern w-full bg-childrencolor py-8">
+        <ChildrenGallery />
       </div>
+
       {children}
     </div>
   );

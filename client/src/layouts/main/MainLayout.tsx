@@ -32,10 +32,8 @@ function MainLayout({ children }: { children: ReactNode }) {
   }, [isLoading]);
 
   return (
-    <div className="pb-32 flex flex-col justify-between">
-      <div className="container">
-        <Header />
-      </div>
+    <div className="flex flex-col justify-between">
+      <Header />
       {children}
       <MainMenu />
       <SocialMediaMenu />

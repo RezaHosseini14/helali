@@ -7,6 +7,7 @@ import { Response, Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../user/entities/user.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -14,6 +15,7 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async findOneByUsername(phone_number: string) {
@@ -77,18 +79,24 @@ export class AuthService {
       }
       const userId = user.id;
 
-      const refreshToken = this.jwtService.sign({
-        id: userId,
-      });
+      const refreshToken = this.jwtService.sign(
+        {
+          id: userId,
+        },
+        { secret: this.configService.get('Jwt.refreshTokenSecret'), expiresIn: '1y' },
+      );
 
       await this.userRepository.update(userId, {
         refresh_token: refreshToken,
       });
 
-      const accessToken = this.jwtService.sign({
-        userId,
-        username,
-      });
+      const accessToken = this.jwtService.sign(
+        {
+          userId,
+          username,
+        },
+        { secret: this.configService.get('Jwt.accessTokenSecret'), expiresIn: '30d' },
+      );
 
       await setRefreshTokenCookie(res, refreshToken);
 
@@ -126,7 +134,7 @@ export class AuthService {
       }
 
       const verifyOptions: JwtVerifyOptions = {
-        secret: 'secret',
+        secret: process.env.ACCESS_TOKEN_SECRET,
       };
 
       const decoded = await this.jwtService.verify(token, verifyOptions);
@@ -147,7 +155,7 @@ export class AuthService {
 
       res.status(HttpStatus.OK).json({ user });
     } catch (error) {
-      res.status(error.getStatus()).json({ message: error.message });
+      res.status(HttpStatus.UNAUTHORIZED).json({ message: error.message });
     }
   }
 
@@ -156,45 +164,84 @@ export class AuthService {
       const refreshToken = req.cookies.refreshToken;
 
       if (!refreshToken) {
-        // throw new HttpException('مشکلی پیش آمده است', HttpStatus.UNAUTHORIZED);
-        res.status(401).json({
+        return res.status(401).json({
           status: 401,
-          message: 'مشکلی پیش آمده است',
+          message: 'توکن یافت نشد',
         });
       }
 
-      // const user = await this.userModel.findOne(
-      //   { refresh_token: refreshToken },
-      //   { password: 0 },
-      // );
+      const user = await this.userRepository.findOne({ where: { refresh_token: refreshToken } });
+      if (!user) {
+        return res.status(401).json({
+          status: 401,
+          message: 'توکن معتبر نیست',
+        });
+      }
 
-      // if (!user) {
-      //   res.status(401).json({
-      //     status: 401,
-      //     message: 'توکن معتبر نیست',
-      //   });
-      // }
+      let decoded;
+      try {
+        decoded = await this.jwtService.verify(refreshToken, {
+          secret: this.configService.get('Jwt.refreshTokenSecret'),
+        });
+      } catch (err) {
+        return res.status(403).json({
+          status: 403,
+          message: 'توکن منقضی شده است',
+        });
+      }
 
-      // const verifyOptions: JwtVerifyOptions = {
-      //   secret: 'secret',
-      // };
+      if (decoded.id !== user.id) {
+        return res.status(403).json({
+          status: 403,
+          message: 'توکن معتبر نیست',
+        });
+      }
 
-      // const decoded = await this.jwtService.verify(refreshToken, verifyOptions);
-
-      // const accessToken = this.jwtService.sign({ user }, { expiresIn: '1d' });
-      // const newRefreshToken = this.jwtService.sign({
-      //   id: user._id,
-      // });
-
-      // setAccessTokenCookie(res, accessToken);
-      // setRefreshTokenCookie(res, newRefreshToken);
-
-      // res.status(200).json({
-      //   status: 200,
-      //   message: 'وارد هستید',
-      // });
+      return res.status(200).json({
+        status: 200,
+        message: 'توکن جدید صادر شد',
+        accessToken: req.cookies.accessToken,
+      });
     } catch (error) {
-      throw error;
+      console.error('Error in refreshToken:', error);
+      return res.status(500).json({
+        status: 500,
+        message: 'خطای سرور',
+      });
+    }
+  }
+
+  async validateAccessToken(token: string) {
+    try {
+      const payload = this.jwtService.verify<any>(token, {
+        secret: this.configService.get('Jwt.accessTokenSecret'),
+      });
+
+      if (typeof payload === 'object' && payload?.userId) {
+        const user = await this.userRepository.findOne({
+          where: { id: payload.userId },
+          select: {
+            id: true,
+            username: true,
+            first_name: true,
+            last_name: true,
+            phone_number: true,
+            age: true,
+            email: true,
+            created_at: true,
+          },
+        });
+
+        if (!user) {
+          throw new UnauthorizedException('به حساب کاربری خود وارد شوید');
+        }
+
+        return user;
+      }
+
+      throw new UnauthorizedException('به حساب کاربری خود وارد شوید');
+    } catch (error) {
+      throw new UnauthorizedException('به حساب کاربری خود وارد شوید');
     }
   }
 }
