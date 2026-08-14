@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER
+  ADMIN
+  USER
+}
+
+enum CommentStatus {
+  pending
+  published
+  rejected
+}
+
+model User {
+  id           Int            @id @default(autoincrement())
+  username     String         @unique
+  passwordHash String         @map("password")
+  firstName    String         @map("first_name")
+  lastName     String         @map("last_name")
+  phoneNumber  String         @map("phone_number")
+  age          Int?
+  email        String?
+  role         UserRole       @default(USER)
+  createdAt    DateTime       @default(now()) @map("created_at")
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@map("user")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  userId     Int?     @map("user_id")
+  changes    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([userId], map: "idx_audit_logs_user_id")
+  @@index([createdAt], map: "idx_audit_logs_created_at")
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    Int       @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model Category {
+  id     Int    @id @default(autoincrement())
+  title  String
+  sort   Int    @unique
+  audios AudioOnCategory[]
+  videos VideoOnCategory[]
+
+  @@index([title], map: "idx_category_title")
+  @@map("category")
+}
+
+model Audio {
+  id                 Int               @id @default(autoincrement())
+  title              String
+  originalName       String            @map("original_name")
+  mimetype           String
+  size               String
+  text               String
+  posterOriginalName String            @map("poster_original_name")
+  posterMimetype     String            @map("poster_mimetype")
+  posterSize         String            @map("poster_size")
+  like               Int               @default(0)
+  view               Int               @default(0)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("update_at")
+  relatedVideoId     Int?              @unique @map("related_video_id")
+  categories         AudioOnCategory[]
+  comments           AudioComment[]
+  relatedVideo       Video?            @relation("AudioVideoPair", fields: [relatedVideoId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt], map: "idx_audio_created_at")
+  @@map("audio")
+}
+
+model AudioOnCategory {
+  audioId    Int @map("audio_id")
+  categoryId Int @map("category_id")
+  audio      Audio    @relation(fields: [audioId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([audioId, categoryId])
+  @@map("audio_categories")
+}
+
+model Video {
+  id                 Int               @id @default(autoincrement())
+  title              String
+  originalName       String            @map("original_name")
+  mimetype           String
+  size               String
+  text               String
+  posterOriginalName String            @map("poster_original_name")
+  posterMimetype     String            @map("poster_mimetype")
+  posterSize         String            @map("poster_size")
+  like               Int               @default(0)
+  view               Int               @default(0)
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("update_at")
+  categories         VideoOnCategory[]
+  comments           VideoComment[]
+  relatedAudio       Audio?            @relation("AudioVideoPair")
+
+  @@index([createdAt], map: "idx_video_created_at")
+  @@map("video")
+}
+
+model VideoOnCategory {
+  videoId    Int @map("video_id")
+  categoryId Int @map("category_id")
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, categoryId])
+  @@map("video_categories")
+}
+
+model Gallery {
+  id           Int              @id @default(autoincrement())
+  originalName String           @map("original_name")
+  mimetype     String
+  size         String
+  desc         String?
+  like         Int?             @default(0)
+  view         Int?             @default(0)
+  isFeatured   Boolean          @default(false) @map("is_featured")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("update_at")
+  comments     GalleryComment[]
+
+  @@index([isFeatured], map: "idx_gallery_is_featured")
+  @@index([createdAt], map: "idx_gallery_created_at")
+  @@map("gallery")
+}
+
+model AudioComment {
+  id        Int           @id @default(autoincrement())
+  author    String
+  text      String
+  status    CommentStatus @default(pending)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  audioId   Int           @map("audio_id")
+  audio     Audio         @relation(fields: [audioId], references: [id], onDelete: Cascade)
+
+  @@index([audioId, status], map: "idx_audio_comments_audio_status")
+  @@map("audio_comments")
+}
+
+model GalleryComment {
+  id        Int           @id @default(autoincrement())
+  author    String
+  text      String
+  status    CommentStatus @default(pending)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  galleryId Int           @map("gallery_id")
+  gallery   Gallery       @relation(fields: [galleryId], references: [id], onDelete: Cascade)
+
+  @@index([galleryId, status], map: "idx_gallery_comments_gallery_status")
+  @@map("gallery_comments")
+}
+
+model VideoComment {
+  id        Int           @id @default(autoincrement())
+  author    String
+  text      String
+  status    CommentStatus @default(pending)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  videoId   Int           @map("video_id")
+  video     Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId, status], map: "idx_video_comments_video_status")
+  @@map("video_comments")
+}

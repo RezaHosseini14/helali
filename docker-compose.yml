@@ -1,0 +1,135 @@
+# Public images are pulled from ArvanCloud Iranian registry mirror.
+
+services:
+  postgres:
+    image: docker.arvancloud.ir/library/postgres:16-alpine
+    container_name: helali-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: helali_database
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U root -d helali_database']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helali-network
+
+  redis:
+    image: docker.arvancloud.ir/library/redis:7-alpine
+    container_name: helali-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helali-network
+
+  minio:
+    image: docker.arvancloud.ir/minio/minio:RELEASE.2022-10-24T18-35-07Z
+    container_name: helali-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio99
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - helali-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: helali-backend
+    restart: unless-stopped
+    profiles:
+      - full
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://root:root@postgres:5432/helali_database?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      BACKEND_PORT: 4000
+      CORS_ORIGIN: http://localhost:3000
+      COOKIE_SECURE: 'false'
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minio99
+      MINIO_SECRET_KEY: minio123
+      MINIO_USE_SSL: 'false'
+      STORAGE_DRIVER: minio
+    ports:
+      - '4000:4000'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/api/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - helali-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+    container_name: helali-frontend
+    restart: unless-stopped
+    profiles:
+      - full
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - helali-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  helali-network:
+    driver: bridge

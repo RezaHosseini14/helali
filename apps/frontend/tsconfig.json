@@ -1,0 +1,105 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/layouts/*": [
+        "./src/layouts/*"
+      ],
+      "@/jsons/*": [
+        "./src/jsons/*"
+      ],
+      "@/redux/*": [
+        "./src/redux/*"
+      ],
+      "@/assets/*": [
+        "./src/assets/*"
+      ],
+      "@/src/*": [
+        "./src/*"
+      ],
+      "utils/*": [
+        "./src/utils/*"
+      ],
+      "models/*": [
+        "./src/models/*"
+      ],
+      "providers/*": [
+        "./src/providers/*"
+      ],
+      "types/*": [
+        "./src/types/*"
+      ],
+      "app/*": [
+        "./src/app/*"
+      ],
+      "services/audio/*": [
+        "./src/services/audio/*"
+      ],
+      "services/video/*": [
+        "./src/services/video/*"
+      ],
+      "services/gallery/*": [
+        "./src/services/gallery/*"
+      ],
+      "services/category/*": [
+        "./src/services/category/*"
+      ],
+      "services/comment/*": [
+        "./src/services/comment/*"
+      ],
+      "services/user/*": [
+        "./src/services/user/*"
+      ],
+      "services/auth/*": [
+        "./src/services/auth/*"
+      ],
+      "services/image/*": [
+        "./src/services/image/*"
+      ],
+      "services/httpService": [
+        "./src/services/httpService"
+      ],
+      "services/config": [
+        "./src/services/config"
+      ]
+    },
+    "target": "ES2020",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

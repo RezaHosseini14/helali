@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "**/*spec.ts",
+    "src/modules/**/*",
+    "src/common/**/*",
+    "src/config/entity/**/*",
+    "src/config/helpers/**/*",
+    "src/config/typeorm.config.ts",
+    "src/config/swagger.config.ts",
+    "src/config/config.ts"
+  ]
+}

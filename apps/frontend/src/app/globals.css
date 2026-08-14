@@ -1,0 +1,454 @@
+@import 'tailwindcss';
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@source "../../src/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../../lib/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../../features/**/*.{js,ts,jsx,tsx,mdx}";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-mainbackground: var(--mainbackground);
+  --color-dashboardbackground: rgb(var(--dashboard-bg-rgb));
+  --color-foreground: var(--foreground);
+  --color-mainColor: rgb(var(--mainColor));
+  --color-mainstructure: rgb(var(--mainstructure));
+  --color-maincolor: rgb(var(--maincolor));
+  --color-childrencolor: #9690e4;
+  --color-childrencolordarker: #7b5cdc;
+  --color-childrenbackgroundcolor: #f9f9f9;
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-foreground: var(--brand-accent-foreground);
+
+  --shadow-mainshadow: 0 10px 40px -23px rgb(var(--mainColor) / 0.35);
+
+  --breakpoint-xs: 500px;
+}
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  width: 100%;
+  max-width: 100%;
+
+  @media (width >= theme(--breakpoint-xs)) {
+    max-width: theme(--breakpoint-xs);
+  }
+  @media (width >= 40rem) {
+    max-width: 40rem;
+    padding-inline: 1.5rem;
+  }
+  @media (width >= 48rem) {
+    max-width: 48rem;
+  }
+  @media (width >= 64rem) {
+    max-width: 64rem;
+    padding-inline: 2rem;
+  }
+  @media (width >= 80rem) {
+    max-width: 80rem;
+    padding-inline: 3rem;
+  }
+  @media (width >= 96rem) {
+    max-width: 96rem;
+    padding-inline: 4rem;
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--border);
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  html {
+    @apply font-sans;
+    scrollbar-gutter: stable;
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role='button'][aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+    transition: background-color 0.2s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@utility btn-mainColor {
+  @apply bg-mainColor transition-all text-white hover:bg-mainColor/90;
+}
+
+@utility glass-back {
+  @apply bg-white/80 backdrop-blur-md dark:bg-slate-900/70;
+}
+
+@utility scrollbar-hidden {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility card-box {
+  @apply rounded-2xl border border-border bg-card p-4 text-card-foreground shadow-sm;
+}
+
+@utility dashboard-header-item {
+  @apply grid size-10 cursor-pointer place-content-center rounded-full bg-mainstructure text-xl text-white;
+}
+
+@utility remove-btn {
+  @apply absolute top-2 left-2 z-10 rounded-full bg-red-700/30 text-2xl text-red-500 shadow-lg backdrop-blur-lg;
+}
+
+@utility trash-btn {
+  @apply grid size-7 shrink-0 cursor-pointer place-content-center rounded-md bg-red-700/30 text-sm text-red-500 backdrop-blur-lg;
+}
+
+@utility update-btn {
+  @apply grid size-7 shrink-0 cursor-pointer place-content-center rounded-md bg-blue-700/30 text-sm text-blue-500 backdrop-blur-lg;
+}
+
+@utility create-btn {
+  @apply grid size-7 shrink-0 cursor-pointer place-content-center rounded-md bg-green-700/30 text-sm text-green-500 backdrop-blur-lg;
+}
+
+@utility section-style {
+  @apply rounded-xl bg-maincolor p-2;
+}
+
+@utility section-icon-style {
+  @apply grid size-14 place-content-center rounded-2xl p-2 text-center;
+}
+
+@utility badge {
+  @apply w-fit rounded-xl px-4;
+}
+
+@utility green-badge {
+  @apply badge border border-green-700 bg-green-200/20 text-green-500;
+}
+
+@utility yellow-badge {
+  @apply badge border border-yellow-700 bg-yellow-200/20 text-yellow-500;
+}
+
+@utility red-badge {
+  @apply badge border border-red-700 bg-red-200/20 text-red-500;
+}
+
+.header-menu li a {
+  @apply w-full px-1 text-sm font-medium sm:px-2 sm:text-base lg:px-4 lg:text-lg;
+}
+
+:root {
+  /* Hero depth #164842; UI primary lifted for contrast — from landing.jpg */
+  --mainColor: 15 110 97;
+  --maincolor: 15 110 97;
+  --dashboard-bg-rgb: 247 250 249;
+  --mainbackground: #f7faf9;
+  --mainforeground: #12201e;
+  --mainstructure: 22 72 66;
+  color-scheme: light;
+
+  --background: #f7faf9;
+  --foreground: #12201e;
+  --card: #ffffff;
+  --card-foreground: #12201e;
+  --popover: #ffffff;
+  --popover-foreground: #12201e;
+  --primary: #0f6e61;
+  --primary-foreground: #ffffff;
+  --secondary: #edf7f5;
+  --secondary-foreground: #0f6e61;
+  --muted: #edf7f5;
+  --muted-foreground: #5c736e;
+  --accent: #edf7f5;
+  --accent-foreground: #0f6e61;
+  --brand-accent: #178a7a;
+  --brand-accent-foreground: #ffffff;
+  --destructive: #dc2626;
+  --border: #d2e2de;
+  --input: #d2e2de;
+  --ring: #0f6e61;
+  --chart-1: #0f6e61;
+  --chart-2: #178a7a;
+  --chart-3: #5c736e;
+  --chart-4: #3ecfba;
+  --chart-5: #164842;
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #12201e;
+  --sidebar-primary: #164842;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #edf7f5;
+  --sidebar-accent-foreground: #0f6e61;
+  --sidebar-border: #d2e2de;
+  --sidebar-ring: #0f6e61;
+
+  --scrollbar-size: 0.625rem;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: color-mix(in srgb, var(--primary) 32%, var(--border));
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--primary) 58%, var(--brand-accent));
+}
+
+.dark {
+  --mainColor: 62 207 186;
+  --maincolor: 62 207 186;
+  --dashboard-bg-rgb: 11 20 18;
+  --mainbackground: #0b1412;
+  --mainforeground: #f3faf8;
+  --mainstructure: 22 72 66;
+  color-scheme: dark;
+
+  --background: #0b1412;
+  --foreground: #f3faf8;
+  --card: #12302c;
+  --card-foreground: #f3faf8;
+  --popover: #12302c;
+  --popover-foreground: #f3faf8;
+  --primary: #3ecfba;
+  --primary-foreground: #06221e;
+  --secondary: #12302c;
+  --secondary-foreground: #f3faf8;
+  --muted: #12302c;
+  --muted-foreground: #9bc4bc;
+  --accent: #12302c;
+  --accent-foreground: #f3faf8;
+  --brand-accent: #5fd9c8;
+  --brand-accent-foreground: #06221e;
+  --destructive: #ef4444;
+  --border: #1e4540;
+  --input: #1e4540;
+  --ring: #3ecfba;
+  --chart-1: #3ecfba;
+  --chart-2: #5fd9c8;
+  --chart-3: #9bc4bc;
+  --chart-4: #178a7a;
+  --chart-5: #164842;
+  --sidebar: #164842;
+  --sidebar-foreground: #f3faf8;
+  --sidebar-primary: #164842;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #12302c;
+  --sidebar-accent-foreground: #f3faf8;
+  --sidebar-border: #1e4540;
+  --sidebar-ring: #3ecfba;
+
+  --scrollbar-thumb: color-mix(in srgb, var(--primary) 42%, var(--border));
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--primary) 72%, var(--brand-accent));
+}
+
+/* ── @videojs/react v10 — Helali theme ─────────────────────────────────── */
+
+.helali-video-skin.media-default-skin {
+  direction: ltr;
+  unicode-bidi: isolate;
+  color: #ffffff;
+}
+
+.helali-video-skin.media-default-skin--video {
+  background: #164842;
+  --media-surface-background-color: color-mix(in srgb, var(--card) 22%, transparent);
+  --media-surface-inner-border-color: color-mix(in srgb, var(--border) 35%, transparent);
+  --media-surface-outer-border-color: color-mix(in srgb, var(--border) 45%, transparent);
+  --media-surface-shadow-color: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --media-border-color: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.dark .helali-video-skin.media-default-skin--video {
+  --media-surface-background-color: color-mix(in srgb, var(--card) 32%, transparent);
+}
+
+.helali-video-skin .media-button--primary {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow:
+    0 8px 24px color-mix(in srgb, var(--primary) 35%, transparent),
+    0 0 0 2px color-mix(in srgb, var(--brand-accent) 45%, transparent);
+}
+
+.helali-video-skin .media-button--primary:hover,
+.helali-video-skin .media-button--primary:focus-visible {
+  background: color-mix(in srgb, var(--primary) 88%, black);
+}
+
+.helali-video-skin .media-slider__fill,
+.helali-video-skin .media-volume-indicator__fill {
+  background: linear-gradient(90deg, var(--primary), var(--brand-accent));
+}
+
+.helali-video-skin .media-slider__track {
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.helali-video-skin .media-slider__buffer {
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.helali-video-skin .media-slider__thumb {
+  background: var(--brand-accent);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 100% 0;
+  }
+}
+
+.skeleton {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--mainforeground) 12%, transparent) 25%,
+    color-mix(in srgb, var(--mainforeground) 6%, transparent) 50%,
+    color-mix(in srgb, var(--mainforeground) 12%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite linear;
+  border-radius: 1rem;
+}
+
+.skeleton-text {
+  width: 80%;
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeleton-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  width: 100%;
+  height: 100%;
+}
+
+.dashboard-box:after {
+  content: '';
+  position: absolute;
+  right: calc(100% + 7px);
+  top: -1px;
+  border-top-right-radius: 1rem;
+  box-shadow: 5px -3px rgb(var(--dashboard-bg-rgb));
+  width: 1rem;
+  height: 1rem;
+}
+
+.dashboard-box::before {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: calc(100% + 7px);
+  border-top-right-radius: 1rem;
+  box-shadow: 5px -3px rgb(var(--dashboard-bg-rgb));
+  width: 1rem;
+  height: 1rem;
+}
+/*
+  ---break---
+*/
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-foreground: var(--brand-accent-foreground);
+  --radius-sm: calc(var(--radius) * 0.7);
+  --radius-md: calc(var(--radius) * 0.85);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.4);
+}
