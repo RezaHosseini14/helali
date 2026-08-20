@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 
 import { CategoriesRepository } from '@/features/categories/categories.repository';
 import { ApiCacheService } from '@/shared/cache/api-cache.service';
+import { MediaDailyStatService } from '@/shared/media-stats/media-daily-stat.service';
 import { MediaViewService } from '@/shared/media-view/media-view.service';
 import { StorageService } from '@/shared/storage/storage.service';
 
@@ -32,7 +33,15 @@ describe('AudioService', () => {
           provide: MediaViewService,
           useValue: {
             tryClaimView: jest.fn().mockResolvedValue(true),
+            tryClaimLike: jest.fn().mockResolvedValue(true),
             buildVisitorKey: jest.fn().mockReturnValue('visitor'),
+          },
+        },
+        {
+          provide: MediaDailyStatService,
+          useValue: {
+            recordView: jest.fn().mockResolvedValue(undefined),
+            recordLike: jest.fn().mockResolvedValue(undefined),
           },
         },
         {

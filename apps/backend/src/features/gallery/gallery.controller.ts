@@ -11,15 +11,18 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Request } from 'express';
 
 import { CheckAbility } from '@/shared/decorators/check-ability.decorator';
 import { Public } from '@/shared/decorators/public.decorator';
 import { BadRequestMessage } from '@/shared/constants/messages';
 import { PaginationDto } from '@/shared/dto/pagination.dto';
+import { MediaViewService } from '@/shared/media-view/media-view.service';
 import { galleryUploadMulterOptions } from '@/shared/upload/multer-limits';
 
 import { CreateGalleryDto } from './dto/create-gallery.dto';
@@ -28,7 +31,10 @@ import { GalleryService } from './gallery.service';
 
 @Controller('gallery')
 export class GalleryController {
-  constructor(private readonly galleryService: GalleryService) {}
+  constructor(
+    private readonly galleryService: GalleryService,
+    private readonly mediaViewService: MediaViewService,
+  ) {}
 
   @Post('upload')
   @CheckAbility({ action: 'create', subject: 'Gallery' })
@@ -89,12 +95,13 @@ export class GalleryController {
   @Public()
   @Post(':id/like')
   @HttpCode(HttpStatus.OK)
-  async like(@Param('id', ParseIntPipe) id: number) {
-    const data = await this.galleryService.like(id);
+  async like(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
+    const visitorKey = this.mediaViewService.buildVisitorKey(request);
+    const data = await this.galleryService.like(id, visitorKey);
 
     return {
       message: data.message,
-      data: { likes: data.likes },
+      data: { likes: data.likes, counted: data.counted },
     };
   }
 

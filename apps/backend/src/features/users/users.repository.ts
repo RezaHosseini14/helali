@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma, User, UserRole } from '@prisma/client';
+import type { Prisma, User } from '@prisma/client';
 
 import { PrismaService } from '@/shared/prisma/prisma.service';
 
@@ -11,8 +11,14 @@ const userSelect = {
   phoneNumber: true,
   age: true,
   email: true,
-  role: true,
+  roleId: true,
   createdAt: true,
+  role: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
 } as const;
 
 export type IUserRecord = Prisma.UserGetPayload<{
@@ -32,7 +38,7 @@ export interface IUpdateUserData {
   readonly phoneNumber?: string;
   readonly age?: number;
   readonly email?: string | null;
-  readonly role?: UserRole;
+  readonly roleId?: number;
 }
 
 @Injectable()
@@ -62,6 +68,20 @@ export class UsersRepository {
     });
   }
 
+  async findByUsername(username: string): Promise<{ id: number } | null> {
+    return this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+  }
+
+  async findByPhoneNumber(phoneNumber: string): Promise<{ id: number } | null> {
+    return this.prisma.user.findFirst({
+      where: { phoneNumber },
+      select: { id: true },
+    });
+  }
+
   async findByIdWithPassword(id: number) {
     return this.prisma.user.findUnique({
       where: { id },
@@ -69,6 +89,24 @@ export class UsersRepository {
         ...userSelect,
         passwordHash: true,
       },
+    });
+  }
+
+  async findRoleById(id: number) {
+    return this.prisma.role.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+  }
+
+  async listRolesForAssignment() {
+    return this.prisma.role.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+      orderBy: { name: 'asc' },
     });
   }
 

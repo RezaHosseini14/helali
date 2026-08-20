@@ -1,5 +1,3 @@
-export type UserRole = 'SUPER' | 'ADMIN' | 'USER';
-
 export interface IUser {
   readonly id: number;
   readonly username: string;
@@ -8,7 +6,8 @@ export interface IUser {
   readonly phoneNumber: string;
   readonly age?: number | null;
   readonly email?: string | null;
-  readonly role: UserRole;
+  readonly roleId: number;
+  readonly role: string;
   readonly createdAt: string;
 }
 
@@ -20,7 +19,8 @@ export interface IUserProfile {
   readonly phoneNumber: string;
   readonly age?: number | null;
   readonly email?: string | null;
-  readonly role: UserRole;
+  readonly roleId: number;
+  readonly role: string;
   readonly permissions?: ReadonlyArray<string>;
 }
 
@@ -32,7 +32,7 @@ export interface ICreateUserInput {
   readonly phoneNumber: string;
   readonly age?: number;
   readonly email?: string;
-  readonly role?: UserRole;
+  readonly roleId?: number;
 }
 
 export interface IUpdateUserInput {
@@ -43,5 +43,5 @@ export interface IUpdateUserInput {
   readonly phoneNumber?: string;
   readonly age?: number;
   readonly email?: string;
-  readonly role?: UserRole;
+  readonly roleId?: number;
 }

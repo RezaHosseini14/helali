@@ -113,6 +113,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       return TRANSIENT_PRISMA_CODES.has(exception.code);
     }
 
+    if (exception instanceof Error) {
+      const code = (exception as NodeJS.ErrnoException).code;
+      if (code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ECONNREFUSED') {
+        return true;
+      }
+
+      if (/server has closed the connection/i.test(exception.message)) {
+        return true;
+      }
+    }
+
     return false;
   }
 

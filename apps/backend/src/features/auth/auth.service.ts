@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { v4 as uuidv4 } from 'uuid';
 
-import { getPermissionsForRole, REFRESH_TOKEN_COOKIE, type IUserProfile } from '@helali/shared';
+import { REFRESH_TOKEN_COOKIE, type IUserProfile } from '@helali/shared';
 
 import { AuditLogsService } from '@/features/audit-logs/audit-logs.service';
 import {
@@ -105,6 +105,12 @@ export class AuthService {
 
     const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
 
+    const defaultRoleId = await this.authRepository.findDefaultUserRoleId();
+
+    if (!defaultRoleId) {
+      throw new ConflictException(BadRequestMessage.FailedUpdate);
+    }
+
     await this.authRepository.createUser({
       username: dto.username,
       passwordHash,
@@ -113,6 +119,7 @@ export class AuthService {
       phoneNumber: dto.phoneNumber,
       age: dto.age,
       email: dto.email,
+      roleId: defaultRoleId,
     });
 
     return { message: PublicMessage.Registered };
@@ -145,7 +152,13 @@ export class AuthService {
       throw new UnauthorizedException(AuthMessage.RefreshTokenInvalid);
     }
 
-    const profile = this.mapProfileFromRefreshPayload(payload);
+    const user = await this.authRepository.findUserById(payload.sub);
+
+    if (!user) {
+      throw new UnauthorizedException(AuthMessage.AuthenticationRequired);
+    }
+
+    const profile = this.mapUserProfile(user);
     const accessToken = this.generateAccessTokenFromProfile(profile);
     const newRefreshToken = this.generateRefreshToken(profile);
 
@@ -183,7 +196,8 @@ export class AuthService {
       firstName: user.firstName,
       lastName: user.lastName,
       phoneNumber: user.phoneNumber,
-      role: user.role as IUserProfile['role'],
+      roleId: user.roleId,
+      role: user.role,
       permissions: [...user.permissions],
     };
   }
@@ -253,10 +267,11 @@ export class AuthService {
   }
 
   private generateAccessTokenFromProfile(profile: IUserProfile): string {
-    const permissions = [...(profile.permissions ?? getPermissionsForRole(profile.role))];
+    const permissions = [...(profile.permissions ?? [])];
     const payload: IJwtPayload = {
       sub: profile.id,
       username: profile.username,
+      roleId: profile.roleId,
       role: profile.role,
       firstName: profile.firstName,
       lastName: profile.lastName,
@@ -271,11 +286,12 @@ export class AuthService {
     const payload = {
       sub: profile.id,
       username: profile.username,
+      roleId: profile.roleId,
       role: profile.role,
       firstName: profile.firstName,
       lastName: profile.lastName,
       phoneNumber: profile.phoneNumber,
-      permissions: [...(profile.permissions ?? getPermissionsForRole(profile.role))],
+      permissions: [...(profile.permissions ?? [])],
       jti: uuidv4(),
       type: 'refresh' as const,
     };
@@ -317,18 +333,6 @@ export class AuthService {
     return secret;
   }
 
-  private mapProfileFromRefreshPayload(payload: IRefreshJwtPayload): IUserProfile {
-    return {
-      id: payload.sub,
-      username: payload.username,
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      phoneNumber: payload.phoneNumber,
-      role: payload.role as IUserProfile['role'],
-      permissions: [...payload.permissions],
-    };
-  }
-
   private mapUserProfile(user: IUserAuthRecord): IUserProfile {
     return {
       id: user.id,
@@ -338,8 +342,9 @@ export class AuthService {
       phoneNumber: user.phoneNumber,
       age: user.age,
       email: user.email,
-      role: user.role,
-      permissions: [...getPermissionsForRole(user.role)],
+      roleId: user.roleId,
+      role: user.role.name,
+      permissions: user.role.permissions.map((item) => item.permission.name),
     };
   }
 

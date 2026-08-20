@@ -1,8 +1,16 @@
+"use client"
+
 import * as React from "react"
+
+import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ChevronLeftIcon, ChevronRightIcon, MoreHorizontalIcon } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -64,37 +72,45 @@ function PaginationLink({
 
 function PaginationPrevious({
   className,
-  text = "Previous",
+  text = "قبلی",
   ...props
 }: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
   return (
-    <PaginationLink
-      aria-label="Go to previous page"
-      size="default"
-      className={cn("pl-1.5!", className)}
-      {...props}
-    >
-      <ChevronLeftIcon data-icon="inline-start" />
-      <span className="hidden sm:block">{text}</span>
-    </PaginationLink>
+    <Tooltip>
+      <TooltipTrigger delay={0} render={<span className="inline-flex" />}>
+        <PaginationLink
+          aria-label={text}
+          size="icon"
+          className={className}
+          {...props}
+        >
+          <ChevronRightIcon />
+        </PaginationLink>
+      </TooltipTrigger>
+      <TooltipContent>{text}</TooltipContent>
+    </Tooltip>
   )
 }
 
 function PaginationNext({
   className,
-  text = "Next",
+  text = "بعدی",
   ...props
 }: React.ComponentProps<typeof PaginationLink> & { text?: string }) {
   return (
-    <PaginationLink
-      aria-label="Go to next page"
-      size="default"
-      className={cn("pr-1.5!", className)}
-      {...props}
-    >
-      <span className="hidden sm:block">{text}</span>
-      <ChevronRightIcon data-icon="inline-end" />
-    </PaginationLink>
+    <Tooltip>
+      <TooltipTrigger delay={0} render={<span className="inline-flex" />}>
+        <PaginationLink
+          aria-label={text}
+          size="icon"
+          className={className}
+          {...props}
+        >
+          <ChevronLeftIcon />
+        </PaginationLink>
+      </TooltipTrigger>
+      <TooltipContent>{text}</TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -112,8 +128,7 @@ function PaginationEllipsis({
       )}
       {...props}
     >
-      <MoreHorizontalIcon
-      />
+      <MoreHorizontalIcon />
       <span className="sr-only">More pages</span>
     </span>
   )

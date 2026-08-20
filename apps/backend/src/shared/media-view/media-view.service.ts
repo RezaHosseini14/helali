@@ -5,10 +5,10 @@ import type { Request } from 'express';
 
 import { RedisService } from '@/shared/redis/redis.service';
 
-export type MediaViewKind = 'audio' | 'video';
+export type MediaEngagementKind = 'audio' | 'video' | 'gallery';
 
-/** One unique view per visitor fingerprint per media item. */
-const MEDIA_VIEW_TTL_SECONDS = 60 * 60 * 24;
+/** One unique view/like per visitor fingerprint per media item (24h). */
+const MEDIA_ENGAGEMENT_TTL_SECONDS = 60 * 60 * 24;
 
 @Injectable()
 export class MediaViewService {
@@ -29,7 +29,28 @@ export class MediaViewService {
    * If Redis is unavailable, fails open (counts once) — client localStorage still soft-dedupes.
    */
   async tryClaimView(
-    kind: MediaViewKind,
+    kind: Exclude<MediaEngagementKind, 'gallery'>,
+    id: number,
+    visitorKey: string,
+  ): Promise<boolean> {
+    return this.tryClaim('view', kind, id, visitorKey);
+  }
+
+  /**
+   * Claims a unique like slot for this visitor.
+   * Returns true when the like should be counted.
+   */
+  async tryClaimLike(
+    kind: MediaEngagementKind,
+    id: number,
+    visitorKey: string,
+  ): Promise<boolean> {
+    return this.tryClaim('like', kind, id, visitorKey);
+  }
+
+  private async tryClaim(
+    metric: 'view' | 'like',
+    kind: MediaEngagementKind,
     id: number,
     visitorKey: string,
   ): Promise<boolean> {
@@ -37,22 +58,24 @@ export class MediaViewService {
       const isReady = await this.redisService.ensureReady();
 
       if (!isReady) {
-        this.logger.warn('Redis unavailable — counting view without server dedupe');
+        this.logger.warn(
+          `Redis unavailable — counting ${metric} without server dedupe`,
+        );
         return true;
       }
     }
 
-    const key = `media:view:${kind}:${id}:${visitorKey}`;
+    const key = `media:${metric}:${kind}:${id}:${visitorKey}`;
 
     try {
       const result = await this.redisService
         .getClient()
-        .set(key, '1', 'EX', MEDIA_VIEW_TTL_SECONDS, 'NX');
+        .set(key, '1', 'EX', MEDIA_ENGAGEMENT_TTL_SECONDS, 'NX');
 
       return result === 'OK';
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'unknown error';
-      this.logger.warn(`View claim failed (${kind}/${id}): ${message}`);
+      this.logger.warn(`${metric} claim failed (${kind}/${id}): ${message}`);
       return true;
     }
   }

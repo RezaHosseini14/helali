@@ -4,34 +4,37 @@ import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
 import type { MouseEvent } from 'react';
 
-import type { RootState } from '@/redux/store';
-import { playAudio, togglePlayback } from '@/redux/slices/audioSlice';
-import type { AppDispatch } from '@/redux/store';
-import type { audioTypes } from 'types/audio.type';
-import { cn } from '@/lib/utils';
-
 import ImageWithLoader from '@/components/global/ImageWithLoader';
+import { useAudioSuggestions } from '@/features/audio/hooks/use-audio-suggestions';
+import type { AppDispatch, RootState } from '@/redux/store';
+import { playAudio, togglePlayback } from '@/redux/slices/audioSlice';
+import { cn } from '@/lib/utils';
+import type { audioTypes } from 'types/audio.type';
+
 import AudioSuggestsLoading from './AudioSuggestsLoading';
 
 interface IAudioSuggestsProps {
-  audios: audioTypes[];
+  currentId: number;
 }
 
-function AudioSuggests({ audios }: IAudioSuggestsProps) {
+function AudioSuggests({ currentId }: IAudioSuggestsProps) {
   const dispatch = useDispatch<AppDispatch>();
-  const { queueLoading, currentId, isPlaying, isOpen } = useSelector((state: RootState) => state.audio);
+  const { currentId: playingId, isPlaying, isOpen } = useSelector(
+    (state: RootState) => state.audio,
+  );
+  const { data, isPending } = useAudioSuggestions(currentId, 5);
 
-  if (queueLoading) {
+  if (isPending) {
     return <AudioSuggestsLoading />;
   }
 
-  const suggestedAudios = audios?.slice(0, 5) ?? [];
+  const suggestedAudios = (data?.audios ?? []) as unknown as audioTypes[];
 
   const handleQuickPlay = (event: MouseEvent<HTMLButtonElement>, audio: audioTypes) => {
     event.preventDefault();
     event.stopPropagation();
 
-    if (currentId === audio.id && isOpen) {
+    if (playingId === audio.id && isOpen) {
       dispatch(togglePlayback());
       return;
     }
@@ -49,7 +52,7 @@ function AudioSuggests({ audios }: IAudioSuggestsProps) {
         </p>
       ) : (
         suggestedAudios.map((audio) => {
-          const isThisPlaying = currentId === audio.id && isOpen && isPlaying;
+          const isThisPlaying = playingId === audio.id && isOpen && isPlaying;
 
           return (
             <Link
@@ -57,7 +60,7 @@ function AudioSuggests({ audios }: IAudioSuggestsProps) {
               href={`/audio/${audio.id}`}
               className={cn(
                 'group flex items-center gap-3 rounded-2xl border border-border/60 bg-card p-2.5 shadow-sm transition hover:border-primary/30 hover:bg-secondary/60 hover:shadow-md',
-                currentId === audio.id && isOpen && 'border-primary/35 ring-2 ring-primary/15',
+                playingId === audio.id && isOpen && 'border-primary/35 ring-2 ring-primary/15',
               )}
             >
               <div className="relative size-18 shrink-0 overflow-hidden rounded-xl bg-muted">

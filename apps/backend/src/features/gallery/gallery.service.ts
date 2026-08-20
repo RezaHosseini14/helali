@@ -10,6 +10,8 @@ import { buildSafeStorageFileName, MINIO_BUCKETS } from '@helali/shared';
 
 import { NotFoundMessage } from '@/shared/constants/messages';
 import { ApiCacheService } from '@/shared/cache/api-cache.service';
+import { MediaDailyStatService } from '@/shared/media-stats/media-daily-stat.service';
+import { MediaViewService } from '@/shared/media-view/media-view.service';
 import { StorageService } from '@/shared/storage/storage.service';
 import { optimizeImageToWebp } from '@/shared/upload/image-optimize';
 import { validateUploadFile } from '@/shared/upload/upload-validation';
@@ -41,6 +43,8 @@ export class GalleryService {
   constructor(
     private readonly galleryRepository: GalleryRepository,
     private readonly storageService: StorageService,
+    private readonly mediaViewService: MediaViewService,
+    private readonly mediaDailyStatService: MediaDailyStatService,
     private readonly apiCacheService: ApiCacheService,
   ) {}
 
@@ -140,16 +144,35 @@ export class GalleryService {
     };
   }
 
-  async like(id: number) {
+  async like(id: number, visitorKey: string) {
+    const shouldCount = await this.mediaViewService.tryClaimLike('gallery', id, visitorKey);
+
+    if (!shouldCount) {
+      const stats = await this.galleryRepository.findLikeStats(id);
+
+      if (!stats) {
+        throw new NotFoundException('فایل موردنظر یافت نشد');
+      }
+
+      return {
+        message: 'لایک قبلاً ثبت شده است',
+        likes: stats.like ?? 0,
+        counted: false as const,
+      };
+    }
+
     const updated = await this.galleryRepository.incrementLike(id);
 
     if (!updated) {
       throw new NotFoundException('فایل موردنظر یافت نشد');
     }
 
+    await this.mediaDailyStatService.recordLike('gallery', id);
+
     return {
       message: 'لایک ثبت شد',
       likes: updated.like,
+      counted: true as const,
     };
   }
 

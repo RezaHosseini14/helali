@@ -46,9 +46,14 @@ export function videoById(id: number) {
   return http.get(`/video/${id}`);
 }
 
-export function viewVideo(id: number) {
-  return http.post(`/video/${id}/view`);
+export function likeVideo(id: number) {
+  return http.post(`/video/${id}/like`);
 }
+
+export function videoSuggestions(id: number, limit = 5) {
+  return http.get(`/video/${id}/suggestions`, { params: { limit } });
+}
+
 
 export function allStories() {
   return http.get('/video/stories');
@@ -61,3 +66,8 @@ export function updateVideoById(
 ) {
   return http.patch(`/video/${id}`, body, withUploadProgress(onUploadProgress));
 }
+
+export function reprocessVideo(id: number) {
+  return http.post(`/video/${id}/reprocess`);
+}
+

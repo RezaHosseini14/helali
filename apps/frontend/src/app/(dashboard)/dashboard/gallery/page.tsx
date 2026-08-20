@@ -20,6 +20,8 @@ import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import CreateGalleryModal from '@/components/pages/dashboard/gallery/CreateGallery.modal';
 import { Button } from '@/components/ui/button';
+import { CanAccess } from '@/features/auth/components/can-access';
+import { useAppAbility } from '@/features/auth/context/ability-provider';
 import { galleryKeys } from '@/features/gallery/hooks/gallery-keys';
 import { getApiErrorMessage } from '@/services/get-api-error-message';
 import { deleteImage, setImageFeatured } from 'services/gallery/galleryServices';
@@ -39,6 +41,10 @@ interface IGalleryRow {
 const columnHelper = createColumnHelper<DataTableFeatures, IGalleryRow>();
 
 function GalleriesListsPage() {
+  const ability = useAppAbility();
+  const canCreate = ability.can('create', 'Gallery');
+  const canUpdate = ability.can('update', 'Gallery');
+  const canDelete = ability.can('delete', 'Gallery');
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [limit, setLimit] = useState(10);
@@ -199,46 +205,54 @@ function GalleriesListsPage() {
 
             return (
               <div className="inline-flex items-center justify-center gap-1">
-                <IconButton
-                  className={
-                    isFeatured
-                      ? 'create-btn'
-                      : 'grid size-7 shrink-0 place-content-center rounded-md bg-primary/10 text-sm text-primary'
-                  }
-                  icon={isRowFeaturing ? 'ki-outline ki-loading animate-spin' : isFeatured ? 'ki-solid ki-star' : 'ki-outline ki-star'}
-                  onClick={() => {
-                    featuredMutation.mutate({
-                      id: row.original.id,
-                      isFeatured: !isFeatured,
-                    });
-                  }}
-                  tooltipText={isFeatured ? 'حذف از اسلایدر منتخب' : 'افزودن به اسلایدر منتخب'}
-                  disabled={isFeatureActionPending}
-                />
-                <IconButton
-                  className="trash-btn"
-                  icon="ki-solid ki-trash"
-                  onClick={() => handleOpenConfirmModal(row.original.id)}
-                  tooltipText="حذف فایل تصویری"
-                />
+                <CanAccess I="update" a="Gallery">
+                  <IconButton
+                    className={
+                      isFeatured
+                        ? 'create-btn'
+                        : 'grid size-7 shrink-0 place-content-center rounded-md bg-primary/10 text-sm text-primary'
+                    }
+                    icon={isRowFeaturing ? 'ki-outline ki-loading animate-spin' : isFeatured ? 'ki-solid ki-star' : 'ki-outline ki-star'}
+                    onClick={() => {
+                      featuredMutation.mutate({
+                        id: row.original.id,
+                        isFeatured: !isFeatured,
+                      });
+                    }}
+                    tooltipText={isFeatured ? 'حذف از اسلایدر منتخب' : 'افزودن به اسلایدر منتخب'}
+                    disabled={isFeatureActionPending}
+                  />
+                </CanAccess>
+                <CanAccess I="delete" a="Gallery">
+                  <IconButton
+                    className="trash-btn"
+                    icon="ki-solid ki-trash"
+                    onClick={() => handleOpenConfirmModal(row.original.id)}
+                    tooltipText="حذف فایل تصویری"
+                  />
+                </CanAccess>
               </div>
             );
           },
         }),
       ]),
-    [featuredMutation, isFeatureActionPending],
+    [canDelete, canUpdate, featuredMutation, isFeatureActionPending],
   );
 
   return (
     <DashboardPanel
       title="لیست تصاویر"
-      buttons={[
-        {
-          icon: 'ki-solid ki-plus-square',
-          title: 'ایجاد تصویر',
-          onClick: () => setShowCreate(true),
-        },
-      ]}
+      buttons={
+        canCreate
+          ? [
+              {
+                icon: 'ki-solid ki-plus-square',
+                title: 'ایجاد تصویر',
+                onClick: () => setShowCreate(true),
+              },
+            ]
+          : []
+      }
     >
       <DataTable
         columns={columns}
@@ -255,12 +269,18 @@ function GalleriesListsPage() {
           setLimit(nextLimit);
         }}
         isBulkDeleting={isPending || bulkFeaturedMutation.isPending}
-        onBulkDelete={(ids, clearSelection) => {
-          clearSelectionRef.current = clearSelection;
-          setSelectedIds(ids.map(Number));
-          setShowConfirm(true);
-        }}
-        renderBulkActions={({ selectedIds: selectedRowIds, clearSelection }) => {
+        onBulkDelete={
+          canDelete
+            ? (ids, clearSelection) => {
+                clearSelectionRef.current = clearSelection;
+                setSelectedIds(ids.map(Number));
+                setShowConfirm(true);
+              }
+            : undefined
+        }
+        renderBulkActions={
+          canUpdate
+            ? ({ selectedIds: selectedRowIds, clearSelection }) => {
           const ids = selectedRowIds.map(Number);
           const selectedRows = ids
             .map((id) => imagesById.get(id))
@@ -289,7 +309,9 @@ function GalleriesListsPage() {
               {shouldFeature ? 'افزودن به اسلایدر منتخب' : 'حذف از اسلایدر منتخب'}
             </Button>
           );
-        }}
+        }
+            : undefined
+        }
       />
 
       <ConfirmModal

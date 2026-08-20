@@ -157,3 +157,42 @@ export function VideosSectionSkeleton() {
     </PanelSkeleton>
   );
 }
+
+export function TweetsSectionSkeleton() {
+  return (
+    <PanelSkeleton>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 lg:gap-5">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className={cn(
+              'min-h-[17rem] space-y-4 rounded-[1.75rem] border border-primary/10 bg-gradient-to-br from-card to-primary/[0.04] p-5',
+              index > 0 && 'hidden sm:block',
+              index > 1 && 'hidden xl:block',
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <Skeleton className="size-14 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-28 rounded-md" />
+                <Skeleton className="h-3 w-20 rounded-md" />
+              </div>
+            </div>
+            <Skeleton className="h-4 w-full rounded-md" />
+            <Skeleton className="h-4 w-5/6 rounded-md" />
+            <Skeleton className="h-4 w-2/3 rounded-md" />
+            <div className="flex items-center justify-between border-t border-primary/10 pt-4">
+              <Skeleton className="h-3.5 w-24 rounded-md" />
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-3.5 w-8 rounded-md" />
+                <Skeleton className="h-3.5 w-8 rounded-md" />
+                <Skeleton className="h-3.5 w-8 rounded-md" />
+                <Skeleton className="h-3.5 w-8 rounded-md" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </PanelSkeleton>
+  );
+}

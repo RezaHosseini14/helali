@@ -13,6 +13,13 @@ export interface IVideo {
   readonly posterSize: string;
   readonly like: number;
   readonly view: number;
+  readonly processingStatus?: 'pending' | 'processing' | 'ready' | 'failed';
+  readonly hlsMasterKey?: string | null;
+  readonly hlsPrefix?: string | null;
+  readonly durationSec?: number | null;
+  readonly processingError?: string | null;
+  readonly processedAt?: string | null;
+  readonly hlsUrl?: string | null;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly categories?: ReadonlyArray<ICategory>;

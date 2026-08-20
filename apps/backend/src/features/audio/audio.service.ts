@@ -18,6 +18,7 @@ import {
 import { ApiCacheService } from '@/shared/cache/api-cache.service';
 import { StorageService } from '@/shared/storage/storage.service';
 import { MediaViewService } from '@/shared/media-view/media-view.service';
+import { MediaDailyStatService } from '@/shared/media-stats/media-daily-stat.service';
 import { optimizeImageToWebp } from '@/shared/upload/image-optimize';
 import { validateUploadFile } from '@/shared/upload/upload-validation';
 
@@ -42,6 +43,7 @@ export class AudioService {
     private readonly categoriesRepository: CategoriesRepository,
     private readonly storageService: StorageService,
     private readonly mediaViewService: MediaViewService,
+    private readonly mediaDailyStatService: MediaDailyStatService,
     private readonly apiCacheService: ApiCacheService,
   ) {}
 
@@ -170,17 +172,57 @@ export class AudioService {
     }
   }
 
-  async like(id: number) {
+  async findSuggestions(id: number, limit = 5) {
     try {
+      const exists = await this.audioRepository.findViewStats(id);
+
+      if (!exists) {
+        throw new NotFoundException(NotFoundMessage.NotFoundAudio);
+      }
+
+      const items = await this.audioRepository.findSuggestions(id, limit);
+      const audios = await Promise.all(items.map((item) => this.mapAudioWithUrls(item)));
+
+      return { audios };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(BadRequestMessage.FailedFetchingData);
+    }
+  }
+
+  async like(id: number, visitorKey: string) {
+    try {
+      const shouldCount = await this.mediaViewService.tryClaimLike('audio', id, visitorKey);
+
+      if (!shouldCount) {
+        const stats = await this.audioRepository.findViewStats(id);
+
+        if (!stats) {
+          throw new NotFoundException(NotFoundMessage.NotFoundAudio);
+        }
+
+        return {
+          message: PublicMessage.LikeAlreadyCounted,
+          likes: stats.like,
+          counted: false as const,
+        };
+      }
+
       const updated = await this.audioRepository.incrementLike(id);
 
       if (!updated) {
         throw new NotFoundException(NotFoundMessage.NotFoundAudio);
       }
 
+      await this.mediaDailyStatService.recordLike('audio', id);
+
       return {
         message: PublicMessage.Like,
         likes: updated.like,
+        counted: true as const,
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -214,6 +256,8 @@ export class AudioService {
       if (!updated) {
         throw new NotFoundException(NotFoundMessage.NotFoundAudio);
       }
+
+      await this.mediaDailyStatService.recordView('audio', id);
 
       return {
         message: PublicMessage.ViewCounted,

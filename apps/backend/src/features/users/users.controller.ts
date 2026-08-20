@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Post,
   Query,
   Req,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { CheckAbility } from '@/shared/decorators/check-ability.decorator';
 import { CurrentUser } from '@/shared/decorators/auth.decorators';
 import type { IAuthenticatedUser } from '@/shared/types/auth.types';
 
+import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersDto } from './dto/list-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
@@ -41,6 +43,34 @@ export class UsersController {
     return {
       message: 'پروفایل دریافت شد',
       data: this.usersService.getProfile(user),
+    };
+  }
+
+  @Get('roles')
+  @CheckAbility({ action: 'manage', subject: 'User' })
+  async listRoles(@CurrentUser() user: IAuthenticatedUser) {
+    const data = await this.usersService.listRolesForAssignment(user);
+
+    return {
+      message: 'لیست نقش‌ها دریافت شد',
+      data,
+    };
+  }
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @CheckAbility({ action: 'manage', subject: 'User' })
+  async create(
+    @Body() dto: CreateUserDto,
+    @CurrentUser() user: IAuthenticatedUser,
+    @Req() request: Request,
+  ) {
+    const ipAddress = request.ip ?? 'unknown';
+    const data = await this.usersService.create(dto, user, ipAddress);
+
+    return {
+      message: 'کاربر با موفقیت ثبت نام شد',
+      data,
     };
   }
 

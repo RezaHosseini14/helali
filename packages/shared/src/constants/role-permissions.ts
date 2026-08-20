@@ -1,7 +1,9 @@
 import { PERMISSIONS } from './permissions';
 import { ROLE_NAMES } from './roles';
 
+/** Default permission sets for system roles (seed + tests). Runtime source of truth is DB. */
 export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
+  [ROLE_NAMES.SUPER]: Object.values(PERMISSIONS),
   [ROLE_NAMES.ADMIN]: [
     PERMISSIONS.AUDIO_READ,
     PERMISSIONS.AUDIO_CREATE,
@@ -17,8 +19,15 @@ export const ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     PERMISSIONS.GALLERY_DELETE,
     PERMISSIONS.CATEGORY_MANAGE,
     PERMISSIONS.COMMENT_MANAGE,
+    PERMISSIONS.TWEET_READ,
+    PERMISSIONS.TWEET_CREATE,
+    PERMISSIONS.TWEET_UPDATE,
+    PERMISSIONS.TWEET_DELETE,
     PERMISSIONS.USER_READ,
+    PERMISSIONS.USER_CREATE,
     PERMISSIONS.USER_UPDATE,
+    PERMISSIONS.USER_DELETE,
+    PERMISSIONS.USER_MANAGE,
     PERMISSIONS.DASHBOARD_READ,
     PERMISSIONS.AUDIT_READ,
   ],

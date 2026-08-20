@@ -6,7 +6,7 @@
 
 **Brand:** Primary `#0f6e61` · Structure `#164842` (landing hero) · Accent `#178a7a` · Paper `#f7faf9`. No pink/brown. Never Jaryan `#006b3f`.
 
-**Rules:** `.cursor/rules/core.mdc` (always). Other rules in `.cursor/rules/` on demand (`frontend`, `nextjs`, `media`, `nestjs`, `prisma`, `security`, `api-performance`, …).
+**Rules:** `.cursor/rules/core.mdc` (always). Other rules in `.cursor/rules/` on demand (`frontend`, `data-table`, `nextjs`, `media`, `nestjs`, `prisma`, `security`, `api-performance`, …).
 
 **Cursor skills:** `.cursor/skills/` — `create-feature`, `create-query`, `create-service`, `create-module`, `refactor-feature`, `review-code`, `nestjs-expert`.
 

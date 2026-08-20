@@ -1,11 +1,19 @@
 'use client';
 
+import { useEffect } from 'react';
 import type { CSSProperties, Ref, SyntheticEvent } from 'react';
 
+import { HlsJsMedia } from '@videojs/media/dom/hls-js';
 import '@videojs/react/video/skin.css';
-import { createPlayer } from '@videojs/react';
+import {
+  createPlayer,
+  useAttachMedia,
+  useComposedRefs,
+  useMediaInstance,
+} from '@videojs/react';
 import { Video, VideoSkin, videoFeatures } from '@videojs/react/video';
 
+import { isHlsPlaybackSource } from '@/lib/video-playback';
 import { cn } from '@/lib/utils';
 
 const HelaliVideoJsPlayer = createPlayer({ features: videoFeatures });
@@ -32,17 +40,7 @@ interface IVideoPlayerProps {
   readonly handleLoadedMetadata?: (duration: number) => void;
 }
 
-function VideoSource({
-  src,
-  mimeType,
-  title,
-  poster,
-  autoPlay,
-  videoRef,
-  onPlay,
-  onEnded,
-  handleLoadedMetadata,
-}: Pick<
+type IVideoSourceProps = Pick<
   IVideoPlayerProps,
   | 'src'
   | 'mimeType'
@@ -53,8 +51,57 @@ function VideoSource({
   | 'onPlay'
   | 'onEnded'
   | 'handleLoadedMetadata'
->) {
+>;
+
+function HlsVideoSource({
+  src,
+  title,
+  poster,
+  autoPlay,
+  videoRef,
+  onPlay,
+  onEnded,
+  handleLoadedMetadata,
+}: IVideoSourceProps) {
+  const media = useMediaInstance(HlsJsMedia);
+  const attachRef = useAttachMedia(media);
+  const ref = useComposedRefs(videoRef, attachRef);
   const videoLabel = title ?? 'پخش ویدیو';
+
+  useEffect(() => {
+    media.src = src;
+  }, [media, src]);
+
+  return (
+    <video
+      ref={ref}
+      playsInline
+      preload="metadata"
+      poster={poster}
+      autoPlay={autoPlay}
+      aria-label={videoLabel}
+      onPlay={onPlay}
+      onEnded={onEnded}
+      onLoadedMetadata={(event: SyntheticEvent<HTMLVideoElement>) =>
+        handleLoadedMetadata?.(event.currentTarget.duration)
+      }
+    />
+  );
+}
+
+function ProgressiveVideoSource({
+  src,
+  mimeType,
+  title,
+  poster,
+  autoPlay,
+  videoRef,
+  onPlay,
+  onEnded,
+  handleLoadedMetadata,
+}: IVideoSourceProps) {
+  const videoLabel = title ?? 'پخش ویدیو';
+
   const sharedProps = {
     ref: videoRef,
     playsInline: true as const,
@@ -79,6 +126,16 @@ function VideoSource({
   return <Video {...sharedProps} src={src} />;
 }
 
+function VideoSource(props: IVideoSourceProps) {
+  const { src, mimeType } = props;
+
+  if (isHlsPlaybackSource(src, mimeType)) {
+    return <HlsVideoSource {...props} />;
+  }
+
+  return <ProgressiveVideoSource {...props} />;
+}
+
 export function VideoPlayer({
   src,
   mimeType,
@@ -95,9 +152,11 @@ export function VideoPlayer({
   handleLoadedMetadata,
 }: IVideoPlayerProps) {
   const isPlain = variant === 'plain';
+  const playbackKey = `${mimeType ?? 'auto'}:${src}`;
 
   const media = (
     <VideoSource
+      key={playbackKey}
       src={src}
       mimeType={mimeType}
       title={title}

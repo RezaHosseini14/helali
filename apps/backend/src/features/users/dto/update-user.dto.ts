@@ -1,7 +1,6 @@
-import { UserRole } from '@prisma/client';
-import { IsEmail, IsEnum, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsInt, IsOptional, IsString, MinLength } from 'class-validator';
 
-import { MIN_PASSWORD_LENGTH, ROLE_NAME_VALUES } from '@helali/shared';
+import { MIN_PASSWORD_LENGTH } from '@helali/shared';
 
 export class UpdateUserDto {
   @IsOptional()
@@ -26,7 +25,7 @@ export class UpdateUserDto {
   phoneNumber?: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   age?: number;
 
   @IsOptional()
@@ -34,6 +33,6 @@ export class UpdateUserDto {
   email?: string;
 
   @IsOptional()
-  @IsEnum(ROLE_NAME_VALUES)
-  role?: UserRole;
+  @IsInt()
+  roleId?: number;
 }

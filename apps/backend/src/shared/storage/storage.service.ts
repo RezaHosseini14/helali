@@ -1,6 +1,7 @@
-import { createWriteStream } from 'node:fs';
-import { access, mkdir, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { createWriteStream, createReadStream } from 'node:fs';
+import { constants } from 'node:fs';
+import { access, mkdir, readdir, unlink, stat } from 'node:fs/promises';
+import { join, relative, dirname } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import * as http from 'node:http';
@@ -8,6 +9,8 @@ import * as http from 'node:http';
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from 'minio';
+
+import { MINIO_BUCKETS } from '@helali/shared';
 
 import type { StorageDriver } from '@/config/storage.config';
 
@@ -67,6 +70,7 @@ export class StorageService {
   private readonly publicBaseUrl: string;
   private readonly minioClient: Client | null;
   private readonly ensuredBuckets = new Set<string>();
+  private readonly ensuredStreamingAccess = new Set<string>();
   private readonly urlCache = new Map<string, ICachedUrl>();
 
   constructor(private readonly configService: ConfigService) {
@@ -159,6 +163,40 @@ export class StorageService {
     this.ensuredBuckets.add(bucketName);
   }
 
+  /**
+   * Public read for HLS playlists/segments + CORS-friendly bucket policy (MinIO only).
+   */
+  async ensureVideoStreamingAccess(): Promise<void> {
+    const bucketName = MINIO_BUCKETS.VIDEO;
+
+    if (this.driver !== 'minio' || this.ensuredStreamingAccess.has(bucketName)) {
+      return;
+    }
+
+    await this.createBucket(bucketName);
+
+    const policy = {
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Effect: 'Allow',
+          Principal: { AWS: ['*'] },
+          Action: ['s3:GetObject'],
+          Resource: [`arn:aws:s3:::${bucketName}/hls/*`],
+        },
+      ],
+    };
+
+    try {
+      await this.requireMinio().setBucketPolicy(bucketName, JSON.stringify(policy));
+      this.ensuredStreamingAccess.add(bucketName);
+      this.logger.log(`Public HLS read enabled for ${bucketName}/hls/*`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      this.logger.warn(`Could not apply HLS bucket policy on ${bucketName}: ${message}`);
+    }
+  }
+
   async listFiles(bucketName: string): Promise<Array<{ name?: string; size?: number }>> {
     if (this.driver === 'local') {
       return [];
@@ -244,11 +282,168 @@ export class StorageService {
     );
   }
 
+  /** Absolute filesystem path for a local object (or download target helper). */
+  getLocalObjectPath(bucketName: string, objectName: string): string {
+    return join(this.getLocalRootAbsolute(), bucketName, objectName);
+  }
+
+  async downloadObjectToFile(
+    bucketName: string,
+    objectName: string,
+    destinationPath: string,
+  ): Promise<void> {
+    await mkdir(dirname(destinationPath), { recursive: true });
+
+    if (this.driver === 'local') {
+      const source = this.getLocalObjectPath(bucketName, objectName);
+      try {
+        await access(source, constants.R_OK);
+      } catch {
+        throw new Error(
+          `Local object missing: ${bucketName}/${objectName} (expected at ${source})`,
+        );
+      }
+      await pipeline(createReadStream(source), createWriteStream(destinationPath));
+      return;
+    }
+
+    const stream = await this.requireMinio().getObject(bucketName, objectName);
+    await pipeline(stream as Readable, createWriteStream(destinationPath));
+  }
+
+  async putObjectFromFile(
+    bucketName: string,
+    objectName: string,
+    filePath: string,
+    mimetype: string,
+  ): Promise<void> {
+    const fileStat = await stat(filePath);
+
+    if (this.driver === 'local') {
+      const destination = this.getLocalObjectPath(bucketName, objectName);
+      await mkdir(dirname(destination), { recursive: true });
+      await pipeline(createReadStream(filePath), createWriteStream(destination));
+      return;
+    }
+
+    await this.createBucket(bucketName);
+    await this.requireMinio().fPutObject(bucketName, objectName, filePath, {
+      'Content-Type': mimetype,
+    });
+    void fileStat;
+  }
+
+  async uploadDirectory(
+    bucketName: string,
+    localDir: string,
+    objectPrefix: string,
+  ): Promise<void> {
+    const entries = await this.walkFiles(localDir);
+
+    for (const absolutePath of entries) {
+      const relativePath = relative(localDir, absolutePath).replace(/\\/g, '/');
+      const objectName = `${objectPrefix.replace(/\/$/, '')}/${relativePath}`;
+      const mimetype = this.guessMimetype(relativePath);
+      await this.putObjectFromFile(bucketName, objectName, absolutePath, mimetype);
+    }
+  }
+
+  async deletePrefix(bucketName: string, prefix: string): Promise<void> {
+    const normalized = prefix.replace(/^\//, '').replace(/\/?$/, '/');
+
+    if (this.driver === 'local') {
+      const root = join(this.getLocalRootAbsolute(), bucketName, normalized);
+      try {
+        const files = await this.walkFiles(root);
+        await Promise.all(files.map((file) => unlink(file).catch(() => undefined)));
+      } catch {
+        // missing prefix
+      }
+      return;
+    }
+
+    const client = this.requireMinio();
+    const objects: string[] = [];
+    const stream = client.listObjectsV2(bucketName, normalized, true);
+
+    await new Promise<void>((resolve, reject) => {
+      stream.on('data', (obj) => {
+        if (obj.name) {
+          objects.push(obj.name);
+        }
+      });
+      stream.on('error', reject);
+      stream.on('end', () => resolve());
+    });
+
+    if (objects.length === 0) {
+      return;
+    }
+
+    await client.removeObjects(bucketName, objects);
+  }
+
+  /**
+   * Stable public URL for HLS playlists/segments (relative paths inside m3u8).
+   * Local: /files/{bucket}/{key}. MinIO: path-style URL on the configured endpoint.
+   */
+  getPublicObjectUrl(bucketName: string, objectName: string): string {
+    if (this.driver === 'local') {
+      const encoded = objectName
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+      return `${this.publicBaseUrl}/files/${bucketName}/${encoded}`;
+    }
+
+    const endPoint = this.configService.get<string>(
+      'minio.publicEndpoint',
+      this.configService.get<string>('minio.endpoint', 'localhost'),
+    );
+    const port = this.configService.get<number>(
+      'minio.publicPort',
+      this.configService.get<number>('minio.port', 9000),
+    );
+    const useSSL = this.configService.get<boolean>('minio.useSsl', false);
+    const protocol = useSSL ? 'https' : 'http';
+    const encoded = objectName
+      .split('/')
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+
+    return `${protocol}://${endPoint}:${port}/${bucketName}/${encoded}`;
+  }
+
+  private async walkFiles(dir: string): Promise<string[]> {
+    const results: string[] = [];
+    const entries = await readdir(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        results.push(...(await this.walkFiles(fullPath)));
+      } else if (entry.isFile()) {
+        results.push(fullPath);
+      }
+    }
+
+    return results;
+  }
+
+  private guessMimetype(fileName: string): string {
+    if (fileName.endsWith('.m3u8')) {
+      return 'application/vnd.apple.mpegurl';
+    }
+    if (fileName.endsWith('.ts')) {
+      return 'video/mp2t';
+    }
+    return 'application/octet-stream';
+  }
+
   private async putObjectLocal(bucketName: string, input: IStorageUploadInput) {
     try {
-      const dir = join(this.getLocalRootAbsolute(), bucketName);
-      await mkdir(dir, { recursive: true });
-      const filePath = join(dir, input.objectName);
+      const filePath = join(this.getLocalRootAbsolute(), bucketName, input.objectName);
+      await mkdir(dirname(filePath), { recursive: true });
       await pipeline(Readable.from(input.buffer), createWriteStream(filePath));
       return { message: 'File uploaded successfully', objectName: input.objectName };
     } catch (error: unknown) {

@@ -26,5 +26,5 @@ export function allDataCount() {
 }
 
 export function registerUser(data: unknown) {
-  return http.post('/auth/register', data);
+  return http.post('/users', data);
 }

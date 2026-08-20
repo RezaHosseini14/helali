@@ -8,6 +8,7 @@ import type { RootState } from '@/redux/store';
 import { playAudio, togglePlayback } from '@/redux/slices/audioSlice';
 import type { AppDispatch } from '@/redux/store';
 
+import { useTrackMediaLike } from '@/features/media/hooks/use-track-media-like';
 import { useTrackMediaView } from '@/features/media/hooks/use-track-media-view';
 import { audioById } from 'services/audio/audioServices';
 import { getApiErrorMessage } from '@/services/get-api-error-message';
@@ -30,7 +31,7 @@ export default function AudioPage() {
   const audioId = Number(id);
   const queryClient = useQueryClient();
   const dispatch = useDispatch<AppDispatch>();
-  const { queue, currentId, isPlaying, isOpen } = useSelector((state: RootState) => state.audio);
+  const { currentId, isPlaying, isOpen } = useSelector((state: RootState) => state.audio);
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ['audioById', id],
@@ -61,6 +62,28 @@ export default function AudioPage() {
   const audio = data?.data?.audio as audioTypes | undefined;
   const isThisTrack = currentId === audioId && isOpen;
   const isThisPlaying = isThisTrack && isPlaying;
+
+  const { like: trackLike, likes, hasLiked } = useTrackMediaLike('audio', audioId, {
+    initialLikes: audio?.like ?? 0,
+    onCounted: (nextLikes) => {
+      queryClient.setQueryData(['audioById', id], (current: IAudioByIdResponse | undefined) => {
+        if (!current?.data?.audio) {
+          return current;
+        }
+
+        return {
+          ...current,
+          data: {
+            ...current.data,
+            audio: {
+              ...current.data.audio,
+              like: nextLikes,
+            },
+          },
+        };
+      });
+    },
+  });
 
   const handlePlay = () => {
     if (!audio) {
@@ -106,13 +129,16 @@ export default function AudioPage() {
               isActive={isThisTrack}
               handlePlay={handlePlay}
               isLoading={false}
+              onLike={trackLike}
+              likes={likes}
+              hasLiked={hasLiked}
             />
           )}
           <CommentsBox id={audioId} type="audio" />
         </div>
 
         <div className="col-span-12 lg:col-span-3">
-          <AudioSuggests audios={queue} />
+          <AudioSuggests currentId={audioId} />
         </div>
       </div>
     </div>

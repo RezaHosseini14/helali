@@ -33,8 +33,16 @@ describe('AuthService', () => {
     phoneNumber: '09120000000',
     age: null,
     email: null,
-    role: 'ADMIN' as const,
+    roleId: 2,
     createdAt: new Date(),
+    role: {
+      id: 2,
+      name: 'ADMIN',
+      permissions: [
+        { permission: { name: 'audio.read' } },
+        { permission: { name: 'user.read' } },
+      ],
+    },
   };
 
   beforeEach(async () => {
@@ -52,6 +60,7 @@ describe('AuthService', () => {
       findUserByUsername: jest.fn(),
       findUserByPhoneNumber: jest.fn(),
       findUserById: jest.fn(),
+      findDefaultUserRoleId: jest.fn().mockResolvedValue(3),
       createUser: jest.fn(),
       createRefreshToken: jest.fn().mockResolvedValue({}),
       findRefreshTokenWithUser: jest.fn(),
@@ -193,6 +202,7 @@ describe('AuthService', () => {
     jest.spyOn(jwtService, 'verify').mockReturnValue({
       sub: 1,
       username: 'admin',
+      roleId: 2,
       role: 'ADMIN',
       firstName: 'Admin',
       lastName: 'User',
@@ -201,11 +211,13 @@ describe('AuthService', () => {
       jti: 'jti-1',
       type: 'refresh',
     });
+    authRepository.findUserById.mockResolvedValue(mockUser);
 
     const result = await service.refresh('eyJrefresh-token');
 
     expect(result.accessToken).toBe('access-token');
     expect(result.refreshToken).toBe('refresh-token-jwt');
+    expect(authRepository.findUserById).toHaveBeenCalledWith(1);
     expect(authRepository.findRefreshTokenWithUser).not.toHaveBeenCalled();
   });
 });

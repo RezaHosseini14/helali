@@ -355,12 +355,40 @@ export default function UpdateVideoModal({ open, id, onClose, refetch }: IUpdate
                     }}
                   />
                   {videoPreviewSrc ? (
-                    <VideoModalPlayer
+                    <div className="space-y-2">
+                      {dataVideoById?.data?.video?.processingStatus ? (
+                        <p className="text-xs text-muted-foreground">
+                          وضعیت HLS:{' '}
+                          <span className="font-medium text-foreground">
+                            {dataVideoById.data.video.processingStatus === 'ready'
+                              ? 'آماده'
+                              : dataVideoById.data.video.processingStatus === 'failed'
+                                ? 'ناموفق'
+                                : dataVideoById.data.video.processingStatus === 'processing'
+                                  ? 'در حال پردازش'
+                                  : 'در صف'}
+                          </span>
+                          {dataVideoById.data.video.processingError
+                            ? ` — ${dataVideoById.data.video.processingError}`
+                            : null}
+                        </p>
+                      ) : null}
+                      <VideoModalPlayer
                       className="w-full"
-                      src={videoPreviewSrc}
+                      src={
+                        dataVideoById?.data?.video?.hlsUrl &&
+                        dataVideoById?.data?.video?.processingStatus === 'ready' &&
+                        !formValue.file
+                          ? dataVideoById.data.video.hlsUrl
+                          : videoPreviewSrc
+                      }
                       poster={posterPreview}
                       mimeType={
-                        formValue.file?.blobFile?.type || dataVideoById?.data?.video?.mimetype
+                        dataVideoById?.data?.video?.hlsUrl &&
+                        dataVideoById?.data?.video?.processingStatus === 'ready' &&
+                        !formValue.file
+                          ? 'application/vnd.apple.mpegurl'
+                          : formValue.file?.blobFile?.type || dataVideoById?.data?.video?.mimetype
                       }
                       title={formValue.title || dataVideoById?.data?.video?.title}
                       disabled={isPending}
@@ -372,6 +400,7 @@ export default function UpdateVideoModal({ open, id, onClose, refetch }: IUpdate
                         setFormValue((prev) => ({ ...prev, file: null }));
                       }}
                     />
+                    </div>
                   ) : (
                     <div
                       className={cn(

@@ -30,7 +30,9 @@ export async function getAudioById(id: number): Promise<{ readonly audio: IAudio
   return unwrapApiResponse(apiClient.get(`/audio/${id}`));
 }
 
-export async function likeAudio(id: number): Promise<{ readonly likes: number }> {
+export async function likeAudio(
+  id: number,
+): Promise<{ readonly likes: number; readonly counted: boolean }> {
   return unwrapApiResponse(apiClient.post(`/audio/${id}/like`));
 }
 
@@ -38,4 +40,13 @@ export async function viewAudio(
   id: number,
 ): Promise<{ readonly views: number; readonly counted: boolean }> {
   return unwrapApiResponse(apiClient.post(`/audio/${id}/view`));
+}
+
+export async function getAudioSuggestions(
+  id: number,
+  limit = 5,
+): Promise<{ readonly audios: ReadonlyArray<IAudio> }> {
+  return unwrapApiResponse(
+    apiClient.get(`/audio/${id}/suggestions`, { params: { limit } }),
+  );
 }

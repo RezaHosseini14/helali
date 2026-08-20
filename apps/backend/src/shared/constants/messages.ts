@@ -3,6 +3,7 @@ export const PublicMessage = {
   DeletedFiles: 'فایل و پوستر با موفقیت حذف شدند',
   Updated: 'با موفقیت به روز رسانی شد',
   Like: 'با موفقیت لایک شد',
+  LikeAlreadyCounted: 'لایک قبلاً ثبت شده است',
   ViewCounted: 'بازدید ثبت شد',
   ViewAlreadyCounted: 'بازدید قبلاً ثبت شده است',
   CreatedComment: 'نظر شما ثبت شد',

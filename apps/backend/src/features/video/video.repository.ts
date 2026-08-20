@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, VideoProcessingStatus } from '@prisma/client';
 import type { Video } from '@prisma/client';
 
+import { rankSuggestionCandidates } from '@/shared/media-suggestions/score-suggestions';
 import { PrismaService } from '@/shared/prisma/prisma.service';
 
 const STORIES_LIMIT = 24;
@@ -46,6 +47,12 @@ const videoListSelect = {
   posterSize: true,
   like: true,
   view: true,
+  processingStatus: true,
+  hlsMasterKey: true,
+  hlsPrefix: true,
+  durationSec: true,
+  processingError: true,
+  processedAt: true,
   createdAt: true,
   updatedAt: true,
   ...videoCategorySelect,
@@ -67,6 +74,12 @@ const videoStorySelect = {
   posterSize: true,
   like: true,
   view: true,
+  processingStatus: true,
+  hlsMasterKey: true,
+  hlsPrefix: true,
+  durationSec: true,
+  processingError: true,
+  processedAt: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -135,10 +148,61 @@ export class VideoRepository {
     });
   }
 
-  async findViewStats(id: number): Promise<{ view: number } | null> {
+  async findSuggestions(id: number, limit: number): Promise<IVideoListItem[]> {
+    const source = await this.prisma.video.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        categories: { select: { categoryId: true } },
+      },
+    });
+
+    if (!source) {
+      return [];
+    }
+
+    const categoryIds = source.categories.map((item) => item.categoryId);
+    const candidateLimit = Math.max(limit * 8, 40);
+
+    let candidates: IVideoListItem[] = [];
+
+    if (categoryIds.length > 0) {
+      candidates = await this.prisma.video.findMany({
+        where: {
+          id: { not: id },
+          ...nonReelsCategoryWhere,
+          categories: {
+            some: {
+              categoryId: { in: categoryIds },
+            },
+          },
+        },
+        select: videoListSelect,
+        take: candidateLimit,
+      });
+    }
+
+    if (candidates.length < limit) {
+      const existingIds = new Set([id, ...candidates.map((item) => item.id)]);
+      const fallback = await this.prisma.video.findMany({
+        where: {
+          id: { notIn: [...existingIds] },
+          ...nonReelsCategoryWhere,
+        },
+        select: videoListSelect,
+        orderBy: [{ view: 'desc' }, { createdAt: 'desc' }],
+        take: limit * 4,
+      });
+      candidates = [...candidates, ...fallback];
+    }
+
+    return rankSuggestionCandidates(candidates, categoryIds, limit);
+  }
+
+  async findViewStats(id: number): Promise<{ view: number; like: number } | null> {
     return this.prisma.video.findUnique({
       where: { id },
-      select: { view: true },
+      select: { view: true, like: true },
     });
   }
 
@@ -162,11 +226,56 @@ export class VideoRepository {
         posterOriginalName: data.posterOriginalName,
         posterMimetype: data.posterMimetype,
         posterSize: data.posterSize,
+        processingStatus: VideoProcessingStatus.pending,
         categories: {
           create: data.categoryIds.map((categoryId) => ({
             categoryId,
           })),
         },
+      },
+    });
+  }
+
+  async findIdsMissingHls(limit: number): Promise<ReadonlyArray<number>> {
+    const rows = await this.prisma.video.findMany({
+      where: {
+        hlsMasterKey: null,
+        processingStatus: {
+          in: [VideoProcessingStatus.ready, VideoProcessingStatus.failed],
+        },
+      },
+      select: { id: true },
+      orderBy: { id: 'asc' },
+      take: limit,
+    });
+
+    return rows.map((row) => row.id);
+  }
+
+  async updateProcessing(
+    id: number,
+    data: {
+      readonly processingStatus?: VideoProcessingStatus;
+      readonly hlsMasterKey?: string | null;
+      readonly hlsPrefix?: string | null;
+      readonly durationSec?: number | null;
+      readonly processingError?: string | null;
+      readonly processedAt?: Date | null;
+    },
+  ): Promise<Video> {
+    return this.prisma.video.update({
+      where: { id },
+      data: {
+        ...(data.processingStatus !== undefined
+          ? { processingStatus: data.processingStatus }
+          : {}),
+        ...(data.hlsMasterKey !== undefined ? { hlsMasterKey: data.hlsMasterKey } : {}),
+        ...(data.hlsPrefix !== undefined ? { hlsPrefix: data.hlsPrefix } : {}),
+        ...(data.durationSec !== undefined ? { durationSec: data.durationSec } : {}),
+        ...(data.processingError !== undefined
+          ? { processingError: data.processingError }
+          : {}),
+        ...(data.processedAt !== undefined ? { processedAt: data.processedAt } : {}),
       },
     });
   }

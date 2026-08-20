@@ -15,6 +15,10 @@ export type videoTypes = {
   categories?: number[];
   like: number;
   view: number;
+  processingStatus?: 'pending' | 'processing' | 'ready' | 'failed';
+  hlsUrl?: string | null;
+  durationSec?: number | null;
+  processingError?: string | null;
   created_at: string;
   relatedAudio?: {
     id: number;

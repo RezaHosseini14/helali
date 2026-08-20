@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { CategoriesRepository } from '@/features/categories/categories.repository';
+import { AudioRepository } from '@/features/audio/audio.repository';
+import { VideoTranscodeService } from '@/features/media-processing/video-transcode.service';
 import { ApiCacheService } from '@/shared/cache/api-cache.service';
+import { MediaDailyStatService } from '@/shared/media-stats/media-daily-stat.service';
 import { MediaViewService } from '@/shared/media-view/media-view.service';
 import { StorageService } from '@/shared/storage/storage.service';
 
@@ -22,18 +25,34 @@ describe('VideoService', () => {
       providers: [
         VideoService,
         { provide: VideoRepository, useValue: videoRepository },
+        { provide: AudioRepository, useValue: {} },
         { provide: CategoriesRepository, useValue: {} },
         {
           provide: StorageService,
           useValue: {
             getPresignedUrl: jest.fn().mockResolvedValue('https://example.com/file'),
+            getPublicObjectUrl: jest.fn().mockReturnValue('https://example.com/hls'),
           },
         },
         {
           provide: MediaViewService,
           useValue: {
             tryClaimView: jest.fn().mockResolvedValue(true),
+            tryClaimLike: jest.fn().mockResolvedValue(true),
             buildVisitorKey: jest.fn().mockReturnValue('visitor'),
+          },
+        },
+        {
+          provide: MediaDailyStatService,
+          useValue: {
+            recordView: jest.fn().mockResolvedValue(undefined),
+            recordLike: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: VideoTranscodeService,
+          useValue: {
+            enqueue: jest.fn().mockResolvedValue(undefined),
           },
         },
         {

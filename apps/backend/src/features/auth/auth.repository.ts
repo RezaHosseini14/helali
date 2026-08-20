@@ -12,8 +12,23 @@ const userAuthSelect = {
   phoneNumber: true,
   age: true,
   email: true,
-  role: true,
+  roleId: true,
   createdAt: true,
+  role: {
+    select: {
+      id: true,
+      name: true,
+      permissions: {
+        select: {
+          permission: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  },
 } as const;
 
 export type IUserAuthRecord = Prisma.UserGetPayload<{
@@ -36,6 +51,7 @@ export interface ICreateUserData {
   readonly phoneNumber: string;
   readonly age?: number;
   readonly email?: string;
+  readonly roleId: number;
 }
 
 @Injectable()
@@ -63,6 +79,15 @@ export class AuthRepository {
     });
   }
 
+  async findDefaultUserRoleId(): Promise<number | null> {
+    const role = await this.prisma.role.findUnique({
+      where: { name: 'USER' },
+      select: { id: true },
+    });
+
+    return role?.id ?? null;
+  }
+
   async createUser(data: ICreateUserData): Promise<User> {
     return this.prisma.user.create({
       data: {
@@ -73,6 +98,7 @@ export class AuthRepository {
         phoneNumber: data.phoneNumber,
         age: data.age,
         email: data.email,
+        roleId: data.roleId,
       },
     });
   }

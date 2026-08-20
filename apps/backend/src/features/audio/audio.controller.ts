@@ -82,6 +82,21 @@ export class AudioController {
   }
 
   @Public()
+  @Get(':id/suggestions')
+  async findSuggestions(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = Math.min(Math.max(Number(limitRaw) || 5, 1), 20);
+    const data = await this.audioService.findSuggestions(id, limit);
+
+    return {
+      message: 'پیشنهادهای صوت دریافت شد',
+      data,
+    };
+  }
+
+  @Public()
   @Get(':id')
   async findById(@Param('id', ParseIntPipe) id: number) {
     const data = await this.audioService.findById(id);
@@ -95,12 +110,13 @@ export class AudioController {
   @Public()
   @Post(':id/like')
   @HttpCode(HttpStatus.OK)
-  async like(@Param('id', ParseIntPipe) id: number) {
-    const data = await this.audioService.like(id);
+  async like(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
+    const visitorKey = this.mediaViewService.buildVisitorKey(request);
+    const data = await this.audioService.like(id, visitorKey);
 
     return {
       message: data.message,
-      data: { likes: data.likes },
+      data: { likes: data.likes, counted: data.counted },
     };
   }
 

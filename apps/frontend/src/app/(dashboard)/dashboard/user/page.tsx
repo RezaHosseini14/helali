@@ -16,30 +16,41 @@ import ConfirmModal from '@/components/global/ConfirmModal';
 import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import CreateUserModal from '@/components/pages/dashboard/user/CreateUser.modal';
+import { CanAccess } from '@/features/auth/components/can-access';
+import { useAppAbility } from '@/features/auth/context/ability-provider';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
+import { getRoleLabel } from '@/features/roles/utils/authorization-labels';
+import { AssignRoleModal } from '@/features/users/components/assign-role-modal';
 import { handleResponse, shamsi } from 'utils/functions';
 import { allUser, deleteUser } from 'services/user/userServices';
 
 interface IUserRow {
   id: number;
   username: string;
-  first_name: string;
-  last_name: string;
-  phone_number: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
   age: number;
   email: string;
-  created_at: string;
+  role?: string;
+  roleId?: number;
+  createdAt: string;
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, IUserRow>();
 
 function UserPage() {
+  const ability = useAppAbility();
+  const canCreate = ability.can('create', 'User') || ability.can('manage', 'User');
+  const canDelete = ability.can('delete', 'User') || ability.can('manage', 'User');
+  const canAssignRole = ability.can('manage', 'User') || ability.can('manageRoles', 'User');
   const { data: currentUser } = useCurrentUser();
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [limit, setLimit] = useState(10);
   const [page, setPage] = useState(1);
   const [showCreate, setShowCreate] = useState(false);
+  const [assignRoleUser, setAssignRoleUser] = useState<IUserRow | null>(null);
   const clearSelectionRef = useRef<(() => void) | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
@@ -100,14 +111,14 @@ function UserPage() {
           header: 'نام‌کاربری',
           cell: ({ getValue }) => <div className="text-center">{getValue()}</div>,
         }),
-        columnHelper.accessor('first_name', {
+        columnHelper.accessor('firstName', {
           header: 'نام',
           cell: ({ getValue }) => <div className="text-center">{getValue()}</div>,
         }),
-        columnHelper.accessor('last_name', {
+        columnHelper.accessor('lastName', {
           header: 'نام خانوادگی',
         }),
-        columnHelper.accessor('phone_number', {
+        columnHelper.accessor('phoneNumber', {
           header: 'شماره همراه',
         }),
         columnHelper.accessor('age', {
@@ -116,7 +127,13 @@ function UserPage() {
         columnHelper.accessor('email', {
           header: 'ایمیل',
         }),
-        columnHelper.accessor('created_at', {
+        columnHelper.accessor('role', {
+          header: 'نقش',
+          cell: ({ getValue }) => (
+            <div className="text-center">{getRoleLabel(getValue() ?? '')}</div>
+          ),
+        }),
+        columnHelper.accessor('createdAt', {
           header: 'تاریخ ایجاد',
           cell: ({ getValue }) => shamsi(getValue(), 'YYYY/MM/DD'),
         }),
@@ -125,29 +142,43 @@ function UserPage() {
           cell: ({ row }) =>
             currentUser?.username === row.original.username ? null : (
               <div className="inline-flex items-center justify-center gap-1">
-                <IconButton
-                  className="trash-btn"
-                  icon="ki-solid ki-trash"
-                  onClick={() => handleOpenConfirmModal(row.original.id)}
-                  tooltipText="حذف کاربر"
-                />
+                {canAssignRole ? (
+                  <IconButton
+                    className="update-btn"
+                    icon="ki-solid ki-shield-user"
+                    onClick={() => setAssignRoleUser(row.original)}
+                    tooltipText="تغییر نقش"
+                  />
+                ) : null}
+                <CanAccess I="manage" a="User">
+                  <IconButton
+                    className="trash-btn"
+                    icon="ki-solid ki-trash"
+                    onClick={() => handleOpenConfirmModal(row.original.id)}
+                    tooltipText="حذف کاربر"
+                  />
+                </CanAccess>
               </div>
             ),
         }),
       ]),
-    [currentUser?.username],
+    [canAssignRole, canDelete, currentUser?.username],
   );
 
   return (
     <DashboardPanel
       title="لیست کاربران"
-      buttons={[
-        {
-          icon: 'ki-solid ki-plus-square',
-          title: 'ایجاد کاربر',
-          onClick: () => setShowCreate(true),
-        },
-      ]}
+      buttons={
+        canCreate
+          ? [
+              {
+                icon: 'ki-solid ki-plus-square',
+                title: 'ایجاد کاربر',
+                onClick: () => setShowCreate(true),
+              },
+            ]
+          : []
+      }
     >
       <DataTable
         columns={columns}
@@ -165,11 +196,15 @@ function UserPage() {
         }}
         isRowSelectable={(row) => currentUser?.username !== row.username}
         isBulkDeleting={isPending}
-        onBulkDelete={(ids, clearSelection) => {
-          clearSelectionRef.current = clearSelection;
-          setSelectedIds(ids.map(Number));
-          setShowConfirm(true);
-        }}
+        onBulkDelete={
+          canDelete
+            ? (ids, clearSelection) => {
+                clearSelectionRef.current = clearSelection;
+                setSelectedIds(ids.map(Number));
+                setShowConfirm(true);
+              }
+            : undefined
+        }
       />
 
       <ConfirmModal
@@ -190,6 +225,16 @@ function UserPage() {
         open={showCreate}
         onClose={() => setShowCreate(false)}
         refetch={refetch}
+      />
+
+      <AssignRoleModal
+        open={assignRoleUser !== null}
+        userId={assignRoleUser?.id ?? 0}
+        currentRoleId={assignRoleUser?.roleId}
+        onClose={() => setAssignRoleUser(null)}
+        onSuccess={() => {
+          void refetch();
+        }}
       />
     </DashboardPanel>
   );

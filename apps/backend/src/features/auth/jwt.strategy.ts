@@ -25,6 +25,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (
       !payload.sub ||
       !payload.username ||
+      !payload.roleId ||
       !payload.role ||
       !payload.firstName ||
       !payload.lastName ||
@@ -43,6 +44,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       id: payload.sub,
       username: payload.username,
+      roleId: payload.roleId,
       role: payload.role,
       firstName: payload.firstName,
       lastName: payload.lastName,

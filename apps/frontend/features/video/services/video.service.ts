@@ -43,3 +43,19 @@ export async function viewVideo(
 ): Promise<{ readonly views: number; readonly counted: boolean }> {
   return unwrapApiResponse(apiClient.post(`/video/${id}/view`));
 }
+
+export async function likeVideo(
+  id: number,
+): Promise<{ readonly likes: number; readonly counted: boolean }> {
+  return unwrapApiResponse(apiClient.post(`/video/${id}/like`));
+}
+
+export async function getVideoSuggestions(
+  id: number,
+  limit = 5,
+): Promise<{ readonly videos: ReadonlyArray<IVideo> }> {
+  return unwrapApiResponse(
+    apiClient.get(`/video/${id}/suggestions`, { params: { limit } }),
+  );
+}
+

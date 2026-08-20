@@ -7,18 +7,61 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 
+import type { AppAbility } from '@helali/shared';
+
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { dashboardMenuItems } from '@/jsons/dashboardMenuItems';
+import { useAppAbility } from '@/features/auth/context/ability-provider';
+import {
+  dashboardMenuItems,
+  type dashboardMenuItemsType,
+} from '@/jsons/dashboardMenuItems';
 import { cn } from '@/lib/utils';
 import type { RootState } from '@/redux/store';
 
 const EXPANDED_MENU_KEY = 'helali.dashboard.expandedMenu';
 
+function canAccessMenuItem(ability: AppAbility, item: dashboardMenuItemsType): boolean {
+  if (!item.subject || !item.action) {
+    return true;
+  }
+
+  return ability.can(item.action, item.subject);
+}
+
+function filterMenuItems(
+  ability: AppAbility,
+  items: ReadonlyArray<dashboardMenuItemsType>,
+): dashboardMenuItemsType[] {
+  return items
+    .map((item) => {
+      const children = item.children
+        ? filterMenuItems(ability, item.children)
+        : undefined;
+
+      if (children && children.length === 0) {
+        return null;
+      }
+
+      if (!canAccessMenuItem(ability, item) && (!children || children.length === 0)) {
+        return null;
+      }
+
+      return {
+        ...item,
+        children,
+      };
+    })
+    .filter((item): item is dashboardMenuItemsType => item !== null);
+}
+
 function isPathMatch(pathname: string, url: string): boolean {
   return pathname === url || pathname.startsWith(`${url}/`);
 }
 
-function findActiveMenu(pathname: string): {
+function findActiveMenu(
+  pathname: string,
+  items: ReadonlyArray<dashboardMenuItemsType>,
+): {
   parentIndex: number;
   childUrl: string | null;
 } {
@@ -26,7 +69,7 @@ function findActiveMenu(pathname: string): {
   let bestChildUrl: string | null = null;
   let bestLength = -1;
 
-  dashboardMenuItems.forEach((item, parentIndex) => {
+  items.forEach((item, parentIndex) => {
     item.children?.forEach((child) => {
       if (!isPathMatch(pathname, child.url)) {
         return;
@@ -43,7 +86,7 @@ function findActiveMenu(pathname: string): {
   return { parentIndex: bestParentIndex, childUrl: bestChildUrl };
 }
 
-function readExpandedMenuIndex(): number {
+function readExpandedMenuIndex(itemCount: number): number {
   if (typeof window === 'undefined') {
     return 0;
   }
@@ -51,7 +94,7 @@ function readExpandedMenuIndex(): number {
   const raw = localStorage.getItem(EXPANDED_MENU_KEY);
   const parsed = raw ? Number.parseInt(raw, 10) : 0;
 
-  if (Number.isNaN(parsed) || parsed < 0 || parsed >= dashboardMenuItems.length) {
+  if (Number.isNaN(parsed) || parsed < 0 || parsed >= itemCount) {
     return 0;
   }
 
@@ -59,17 +102,27 @@ function readExpandedMenuIndex(): number {
 }
 
 function Sidebar() {
+  const ability = useAppAbility();
   const { sidebarStatus } = useSelector((state: RootState) => state.style);
   const pathname = usePathname();
-  const { childUrl: activeChildUrl } = useMemo(() => findActiveMenu(pathname), [pathname]);
+
+  const visibleMenuItems = useMemo(
+    () => filterMenuItems(ability, dashboardMenuItems),
+    [ability],
+  );
+
+  const { childUrl: activeChildUrl } = useMemo(
+    () => findActiveMenu(pathname, visibleMenuItems),
+    [pathname, visibleMenuItems],
+  );
 
   const [expandedMenuIndex, setExpandedMenuIndex] = useState(() => {
-    const { parentIndex } = findActiveMenu(pathname);
-    return parentIndex >= 0 ? parentIndex : readExpandedMenuIndex();
+    const { parentIndex } = findActiveMenu(pathname, visibleMenuItems);
+    return parentIndex >= 0 ? parentIndex : 0;
   });
 
   useEffect(() => {
-    const { parentIndex } = findActiveMenu(pathname);
+    const { parentIndex } = findActiveMenu(pathname, visibleMenuItems);
 
     if (parentIndex >= 0) {
       setExpandedMenuIndex(parentIndex);
@@ -77,8 +130,8 @@ function Sidebar() {
       return;
     }
 
-    setExpandedMenuIndex(readExpandedMenuIndex());
-  }, [pathname]);
+    setExpandedMenuIndex(readExpandedMenuIndex(visibleMenuItems.length));
+  }, [pathname, visibleMenuItems]);
 
   const handleShowChildren = (index: number) => {
     setExpandedMenuIndex(index);
@@ -98,7 +151,7 @@ function Sidebar() {
           sidebarStatus ? 'py-8' : 'py-3',
         )}
       >
-        {dashboardMenuItems.map((item, index) => {
+        {visibleMenuItems.map((item, index) => {
           const isActive = expandedMenuIndex === index;
 
           return (
@@ -135,7 +188,7 @@ function Sidebar() {
           sidebarStatus ? 'px-2 py-4 opacity-100' : 'pointer-events-none p-0 opacity-0',
         )}
       >
-        {dashboardMenuItems[expandedMenuIndex]?.children ? (
+        {visibleMenuItems[expandedMenuIndex]?.children ? (
           <motion.ul
             key={expandedMenuIndex}
             className="flex w-full min-w-0 flex-col gap-1.5"
@@ -144,9 +197,9 @@ function Sidebar() {
             transition={{ duration: 0.2 }}
           >
             <p className="mb-2 truncate border-b border-border px-2 pb-2 text-base font-bold text-foreground">
-              {dashboardMenuItems[expandedMenuIndex].title}
+              {visibleMenuItems[expandedMenuIndex].title}
             </p>
-            {dashboardMenuItems[expandedMenuIndex].children?.map((child) => {
+            {visibleMenuItems[expandedMenuIndex].children?.map((child) => {
               const isChildActive = activeChildUrl === child.url;
 
               return (

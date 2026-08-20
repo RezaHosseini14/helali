@@ -3,6 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useTrackMediaLike } from '@/features/media/hooks/use-track-media-like';
 import { useTrackMediaView } from '@/features/media/hooks/use-track-media-view';
 import { ErrorState } from '@/components/ui/error-state';
 import CommentsBox from '@/components/pages/front/audioPage/CommentsBox';
@@ -29,6 +30,8 @@ export default function VideoPage() {
     queryFn: () => videoById(videoId),
   });
 
+  const video = data?.data?.video as videoTypes | undefined;
+
   const trackView = useTrackMediaView('video', videoId, {
     onCounted: (views) => {
       queryClient.setQueryData(['videoById', id], (current: IVideoByIdResponse | undefined) => {
@@ -50,7 +53,27 @@ export default function VideoPage() {
     },
   });
 
-  const video = data?.data?.video as videoTypes | undefined;
+  const { like: trackLike, likes, hasLiked } = useTrackMediaLike('video', videoId, {
+    initialLikes: video?.like ?? 0,
+    onCounted: (nextLikes) => {
+      queryClient.setQueryData(['videoById', id], (current: IVideoByIdResponse | undefined) => {
+        if (!current?.data?.video) {
+          return current;
+        }
+
+        return {
+          ...current,
+          data: {
+            ...current.data,
+            video: {
+              ...current.data.video,
+              like: nextLikes,
+            },
+          },
+        };
+      });
+    },
+  });
 
   return (
     <div className="relative min-h-[70vh]">
@@ -73,7 +96,14 @@ export default function VideoPage() {
               onRetry={() => void refetch()}
             />
           ) : (
-            <VideoDetails video={video} isLoading={false} onPlay={trackView} />
+            <VideoDetails
+              video={video}
+              isLoading={false}
+              onPlay={trackView}
+              onLike={trackLike}
+              likes={likes}
+              hasLiked={hasLiked}
+            />
           )}
           <CommentsBox id={videoId} type="video" />
         </div>

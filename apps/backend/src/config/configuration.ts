@@ -24,4 +24,32 @@ export const jwtConfig = registerAs('jwt', () => ({
 
 export const redisConfig = registerAs('redis', () => ({
   url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+  /** Isolates BullMQ keys so local dev workers do not steal production transcode jobs. */
+  bullPrefix: process.env.BULLMQ_PREFIX?.trim() || 'helali',
 }));
+
+/** RSS fallback instances (primary source is FxTwitter API); see https://status.d420.de/ */
+const DEFAULT_TWEETS_FEED_INSTANCES = [
+  'https://nitter.poast.org',
+  'https://nitter.privacyredirect.com',
+  'https://nitter.tiekoetter.com',
+  'https://nitter.net',
+  'https://nitter.catsarch.com',
+  'https://xcancel.com',
+];
+
+export const tweetsConfig = registerAs('tweets', () => {
+  const rawInstances = process.env.TWEETS_FEED_INSTANCES?.trim();
+  const feedInstances = rawInstances
+    ? rawInstances
+        .split(',')
+        .map((value) => value.trim().replace(/\/$/, ''))
+        .filter((value) => value.length > 0)
+    : DEFAULT_TWEETS_FEED_INSTANCES;
+
+  return {
+    username: process.env.TWEETS_USERNAME?.trim() || 'helalireza',
+    syncCron: process.env.TWEETS_SYNC_CRON?.trim() || '0 6 * * *',
+    feedInstances,
+  };
+});

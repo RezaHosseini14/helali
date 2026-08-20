@@ -7,6 +7,13 @@ export type {
   ICreateUserInput,
   IUpdateUserInput,
 } from './user';
+export type {
+  IRole,
+  IPermission,
+  IRoleDetail,
+  ICreateRoleInput,
+  IUpdateRoleInput,
+} from './role';
 export type { IAuthTokens, ILoginResponse } from './auth';
 export type {
   IAudio,
@@ -35,3 +42,4 @@ export type {
 } from './comment';
 export type { IEncryptedEnvelope } from './encryption';
 export type { IRelatedMediaSummary } from './related-media';
+export type { ITweet } from './tweet';

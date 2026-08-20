@@ -69,6 +69,57 @@ describe('CaslGuard', () => {
 
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
+
+  it('should_allow_manageRoles_with_permission', () => {
+    reflector.getAllAndOverride.mockReturnValue([
+      { action: 'manageRoles', subject: 'User' },
+    ]);
+
+    const context = createMockContext(
+      {
+        id: 1,
+        role: 'ADMIN',
+        permissions: ['user.manage-roles'],
+      },
+      {},
+    );
+
+    expect(guard.canActivate(context)).toBe(true);
+  });
+
+  it('should_reject_manageRoles_without_permission', () => {
+    reflector.getAllAndOverride.mockReturnValue([
+      { action: 'manageRoles', subject: 'User' },
+    ]);
+
+    const context = createMockContext(
+      {
+        id: 2,
+        role: 'ADMIN',
+        permissions: ['user.read'],
+      },
+      {},
+    );
+
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+  });
+
+  it('should_allow_super_for_any_ability_requirement', () => {
+    reflector.getAllAndOverride.mockReturnValue([
+      { action: 'manageRoles', subject: 'User' },
+    ]);
+
+    const context = createMockContext(
+      {
+        id: 1,
+        role: 'SUPER',
+        permissions: [],
+      },
+      {},
+    );
+
+    expect(guard.canActivate(context)).toBe(true);
+  });
 });
 
 function createMockContext(

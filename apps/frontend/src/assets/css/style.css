@@ -176,7 +176,11 @@ body.children .custom-pagination .swiper-pagination-bullet-active {
 }
 
 .landing-hero__figure {
-  mask-image: linear-gradient(to top, transparent 0%, black 12%);
+  mask-image: linear-gradient(to top, transparent 0%, black 10%);
+}
+
+.landing-hero__figure img {
+  display: block;
 }
 
 @media (prefers-reduced-motion: reduce) {

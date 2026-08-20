@@ -81,6 +81,13 @@ export class GalleryRepository {
     });
   }
 
+  async findLikeStats(id: number): Promise<{ like: number | null } | null> {
+    return this.prisma.gallery.findUnique({
+      where: { id },
+      select: { like: true },
+    });
+  }
+
   async incrementLike(id: number): Promise<Gallery | null> {
     try {
       return await this.prisma.gallery.update({

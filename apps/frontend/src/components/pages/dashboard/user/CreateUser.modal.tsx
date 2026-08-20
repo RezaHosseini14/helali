@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
+import type { IRole } from '@helali/shared';
+
 import TextField from '@/components/global/fields/TextField';
+import SelectField from '@/components/global/fields/SelectField';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,21 +18,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { getRoleLabel } from '@/features/roles/utils/authorization-labels';
 import { getSchemaErrorMessage } from '@/lib/validate-schema';
-import { registerModel } from 'models/register.model';
+import { registerModel, type IRegisterFormValue } from 'models/register.model';
+import { apiClient, unwrapApiResponse } from '@/services/api-client';
 import { registerUser } from 'services/auth/authServices';
 import { handleResponse } from 'utils/functions';
-
-export interface IRegisterFormValue {
-  username: string;
-  password: string;
-  confirmPassword: string;
-  first_name: string;
-  last_name: string;
-  phone_number: string;
-  age?: number;
-  email?: string;
-}
 
 interface ICreateUserModalProps {
   readonly open: boolean;
@@ -41,22 +35,54 @@ const EMPTY_FORM: IRegisterFormValue = {
   username: '',
   password: '',
   confirmPassword: '',
-  first_name: '',
-  last_name: '',
-  phone_number: '',
+  firstName: '',
+  lastName: '',
+  phoneNumber: '',
+  roleId: 0,
   age: undefined,
   email: undefined,
 };
 
+async function fetchAssignableRoles(): Promise<ReadonlyArray<IRole>> {
+  return unwrapApiResponse(apiClient.get('/users/roles'));
+}
+
 export default function CreateUserModal({ open, onClose, refetch }: ICreateUserModalProps) {
   const [formValue, setFormValue] = useState<IRegisterFormValue>(EMPTY_FORM);
+
+  const { data: roles = [], isLoading: isRolesLoading } = useQuery({
+    queryKey: ['assignable-roles'],
+    queryFn: fetchAssignableRoles,
+    enabled: open,
+  });
 
   const { mutateAsync, isPending } = useMutation({
     mutationFn: registerUser,
   });
 
-  function handleInputChange(name: keyof IRegisterFormValue, value: string | number | undefined): void {
+  const roleOptions = useMemo(
+    () =>
+      roles.map((role) => ({
+        label: getRoleLabel(role.name),
+        value: role.id,
+      })),
+    [roles],
+  );
+
+  useEffect(() => {
+    if (open && roles.length > 0 && !formValue.roleId) {
+      setFormValue((prev) => ({ ...prev, roleId: roles[0]!.id }));
+    }
+  }, [open, roles, formValue.roleId]);
+
+  function handleInputChange(
+    name: keyof IRegisterFormValue,
+    value: string | number | undefined,
+  ): void {
     if (name === 'age' && value !== '' && value !== undefined) {
+      value = Number(value);
+    }
+    if (name === 'roleId' && value !== '' && value !== undefined) {
       value = Number(value);
     }
     setFormValue((prev) => ({ ...prev, [name]: value }));
@@ -129,25 +155,37 @@ export default function CreateUserModal({ open, onClose, refetch }: ICreateUserM
               type="password"
             />
             <TextField
-              name="first_name"
+              name="firstName"
               title="نام"
               containerClassName="col-span-6"
-              value={formValue.first_name}
-              onChange={(value: string) => handleInputChange('first_name', value)}
+              value={formValue.firstName}
+              onChange={(value: string) => handleInputChange('firstName', value)}
             />
             <TextField
-              name="last_name"
+              name="lastName"
               title="نام خانوادگی"
               containerClassName="col-span-6"
-              value={formValue.last_name}
-              onChange={(value: string) => handleInputChange('last_name', value)}
+              value={formValue.lastName}
+              onChange={(value: string) => handleInputChange('lastName', value)}
             />
             <TextField
-              name="phone_number"
+              name="phoneNumber"
               title="تلفن همراه"
               containerClassName="col-span-6"
-              value={formValue.phone_number}
-              onChange={(value: string) => handleInputChange('phone_number', value)}
+              value={formValue.phoneNumber}
+              onChange={(value: string) => handleInputChange('phoneNumber', value)}
+            />
+            <SelectField
+              name="roleId"
+              title="نقش"
+              containerClassName="col-span-6"
+              data={roleOptions}
+              value={formValue.roleId || null}
+              onChange={(value) =>
+                handleInputChange('roleId', value ? Number(value) : undefined)
+              }
+              loading={isRolesLoading}
+              placeholder="انتخاب نقش"
             />
             <TextField
               name="age"

@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
 import { useAudios } from '@/features/audio/hooks/use-audios';
 import { useGallery } from '@/features/gallery/hooks/use-gallery';
+import { useTweets } from '@/features/tweets/hooks/use-tweets';
 import { useVideoStories, useVideos } from '@/features/video/hooks/use-videos';
 import AudiosBox from '@/components/pages/front/home/AudiosBox';
 import HomeSlider from '@/components/pages/front/home/HomeSlider';
@@ -14,11 +15,13 @@ import {
   AudiosSectionSkeleton,
   ImagesSectionSkeleton,
   StoriesSectionSkeleton,
+  TweetsSectionSkeleton,
   VideosSectionSkeleton,
 } from '@/components/pages/front/home/HomeSectionsLoading';
 import ImagesBox from '@/components/pages/front/home/ImagesBox';
 import LandingBox from '@/components/pages/front/home/LandingBox';
 import StoriesBox, { type IStory } from '@/components/pages/front/home/StoriesBox';
+import TweetsBox from '@/components/pages/front/home/TweetsBox';
 import VideosBox from '@/components/pages/front/home/VideosBox';
 import type { audioTypes } from 'types/audio.type';
 import type { imageType } from 'types/image.type';
@@ -31,6 +34,7 @@ export default function HomePage() {
   const imagesQuery = useGallery(1, 8);
   const videosQuery = useVideos(1, 6);
   const storiesQuery = useVideoStories();
+  const tweetsQuery = useTweets(9);
 
   return (
     <>
@@ -87,6 +91,21 @@ export default function HomePage() {
             <VideosBox videos={(videosQuery.data?.videos ?? []) as unknown as videoTypes[]} />
           ) : (
             <EmptyState title="ویدیویی یافت نشد" description="به‌زودی ویدیوهای جدید منتشر می‌شود." />
+          )}
+        </div>
+
+        <div className="container">
+          {tweetsQuery.isPending ? (
+            <TweetsSectionSkeleton />
+          ) : tweetsQuery.isError ? (
+            <ErrorState title="توییت‌ها بارگذاری نشد" onRetry={() => void tweetsQuery.refetch()} />
+          ) : (tweetsQuery.data?.length ?? 0) > 0 ? (
+            <TweetsBox tweets={tweetsQuery.data ?? []} />
+          ) : (
+            <EmptyState
+              title="توییتی یافت نشد"
+              description="به‌زودی توییت‌های جدید همگام‌سازی می‌شود."
+            />
           )}
         </div>
 

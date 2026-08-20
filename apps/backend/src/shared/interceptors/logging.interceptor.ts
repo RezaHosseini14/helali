@@ -4,7 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { tap } from 'rxjs';
+import { catchError, tap, throwError } from 'rxjs';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
@@ -23,6 +23,15 @@ export class LoggingInterceptor implements NestInterceptor {
         console.log(
           `[${request.method}] ${request.url} - ${duration}ms - user:${userId}`,
         );
+      }),
+      catchError((error: unknown) => {
+        const duration = Date.now() - start;
+        const userId = request.user?.id ?? 'anonymous';
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(
+          `[${request.method}] ${request.url} - ${duration}ms - user:${userId} - FAILED: ${message}`,
+        );
+        return throwError(() => error);
       }),
     );
   }

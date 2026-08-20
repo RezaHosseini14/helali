@@ -7,32 +7,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  SUPER
-  ADMIN
-  USER
-}
-
 enum CommentStatus {
   pending
   published
   rejected
 }
 
+enum VideoProcessingStatus {
+  pending
+  processing
+  ready
+  failed
+}
+
+model Role {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String
+  isSystem    Boolean          @default(false) @map("is_system")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int @map("role_id")
+  permissionId Int @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
 model User {
-  id           Int            @id @default(autoincrement())
-  username     String         @unique
-  passwordHash String         @map("password")
-  firstName    String         @map("first_name")
-  lastName     String         @map("last_name")
-  phoneNumber  String         @map("phone_number")
-  age          Int?
-  email        String?
-  role         UserRole       @default(USER)
-  createdAt    DateTime       @default(now()) @map("created_at")
+  id            Int            @id @default(autoincrement())
+  username      String         @unique
+  passwordHash  String         @map("password")
+  firstName     String         @map("first_name")
+  lastName      String         @map("last_name")
+  phoneNumber   String         @map("phone_number")
+  age           Int?
+  email         String?
+  roleId        Int            @map("role_id")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  role          Role           @relation(fields: [roleId], references: [id], onDelete: Restrict)
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
 
+  @@index([roleId], map: "idx_user_role_id")
   @@map("user")
 }
 
@@ -114,24 +151,31 @@ model AudioOnCategory {
 }
 
 model Video {
-  id                 Int               @id @default(autoincrement())
+  id                 Int                   @id @default(autoincrement())
   title              String
-  originalName       String            @map("original_name")
+  originalName       String                @map("original_name")
   mimetype           String
   size               String
   text               String
-  posterOriginalName String            @map("poster_original_name")
-  posterMimetype     String            @map("poster_mimetype")
-  posterSize         String            @map("poster_size")
-  like               Int               @default(0)
-  view               Int               @default(0)
-  createdAt          DateTime          @default(now()) @map("created_at")
-  updatedAt          DateTime          @updatedAt @map("update_at")
+  posterOriginalName String                @map("poster_original_name")
+  posterMimetype     String                @map("poster_mimetype")
+  posterSize         String                @map("poster_size")
+  like               Int                   @default(0)
+  view               Int                   @default(0)
+  processingStatus   VideoProcessingStatus @default(ready) @map("processing_status")
+  hlsMasterKey       String?               @map("hls_master_key")
+  hlsPrefix          String?               @map("hls_prefix")
+  durationSec        Float?                @map("duration_sec")
+  processingError    String?               @map("processing_error")
+  processedAt        DateTime?             @map("processed_at")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("update_at")
   categories         VideoOnCategory[]
   comments           VideoComment[]
-  relatedAudio       Audio?            @relation("AudioVideoPair")
+  relatedAudio       Audio?                @relation("AudioVideoPair")
 
   @@index([createdAt], map: "idx_video_created_at")
+  @@index([processingStatus], map: "idx_video_processing_status")
   @@map("video")
 }
 
@@ -203,4 +247,54 @@ model VideoComment {
 
   @@index([videoId, status], map: "idx_video_comments_video_status")
   @@map("video_comments")
+}
+
+model MediaDailyStat {
+  id         String   @id @default(uuid())
+  entityType String   @map("entity_type")
+  entityId   Int      @map("entity_id")
+  date       DateTime @db.Date
+  views      Int      @default(0)
+  likes      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([entityType, entityId, date], map: "uq_media_daily_stats_entity_date")
+  @@index([date], map: "idx_media_daily_stats_date")
+  @@index([entityType, date], map: "idx_media_daily_stats_type_date")
+  @@map("media_daily_stats")
+}
+
+model Tweet {
+  id              Int      @id @default(autoincrement())
+  externalId      String   @unique @map("external_id")
+  username        String
+  text            String
+  link            String
+  imageUrls       String[] @default([]) @map("image_urls")
+  videoUrls       String[] @default([]) @map("video_urls")
+  videoPosterUrls String[] @default([]) @map("video_poster_urls")
+  hasVideo        Boolean  @default(false) @map("has_video")
+  likeCount       Int      @default(0) @map("like_count")
+  replyCount      Int      @default(0) @map("reply_count")
+  retweetCount    Int      @default(0) @map("retweet_count")
+  quoteCount      Int      @default(0) @map("quote_count")
+  isPublished     Boolean  @default(true) @map("is_published")
+  publishedAt     DateTime @map("published_at")
+  fetchedAt       DateTime @default(now()) @map("fetched_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([username, publishedAt(sort: Desc)], map: "idx_tweet_username_published")
+  @@index([isPublished, publishedAt(sort: Desc)], map: "idx_tweet_published_at")
+  @@map("tweet")
+}
+
+model TweetProfile {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  avatarUrl String   @map("avatar_url")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("tweet_profile")
 }

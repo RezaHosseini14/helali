@@ -18,23 +18,39 @@ import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import CreateVideoModal from '@/components/pages/dashboard/video/CreateVideo.modal';
 import UpdateVideoModal from '@/components/pages/dashboard/video/UpdateVideo.modal';
+import { CanAccess } from '@/features/auth/components/can-access';
+import { useAppAbility } from '@/features/auth/context/ability-provider';
 import { handleResponse, shamsi } from 'utils/functions';
-import { allVideo, deleteVideo } from 'services/video/videoServices';
+import { allVideo, deleteVideo, reprocessVideo } from 'services/video/videoServices';
 
 interface IVideoRow {
   id: number;
+  title: string;
   text: string;
   originalName: string;
   mimetype: string;
   size: number | string;
   like: number;
   view: number;
+  processingStatus?: 'pending' | 'processing' | 'ready' | 'failed';
   created_at: string;
+  createdAt?: string;
 }
+
+const PROCESSING_LABELS: Record<string, string> = {
+  pending: 'در صف',
+  processing: 'در حال پردازش',
+  ready: 'آماده',
+  failed: 'ناموفق',
+};
 
 const columnHelper = createColumnHelper<DataTableFeatures, IVideoRow>();
 
 function VideosListsPage() {
+  const ability = useAppAbility();
+  const canCreate = ability.can('create', 'Video');
+  const canUpdate = ability.can('update', 'Video');
+  const canDelete = ability.can('delete', 'Video');
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [limit, setLimit] = useState(10);
@@ -55,6 +71,11 @@ function VideosListsPage() {
   const { mutateAsync, isPending } = useMutation({
     mutationKey: ['deleteVideo'],
     mutationFn: (id: number) => deleteVideo(id),
+  });
+
+  const { mutateAsync: reprocessMutate, isPending: isReprocessing } = useMutation({
+    mutationKey: ['reprocessVideo'],
+    mutationFn: (id: number) => reprocessVideo(id),
   });
 
   function handleOpenConfirmModal(id: number): void {
@@ -97,6 +118,9 @@ function VideosListsPage() {
           ...dataTableIdColumnDefaults,
           cell: ({ getValue }) => <div className="text-center">{getValue()}</div>,
         }),
+        columnHelper.accessor('title', {
+          header: 'عنوان',
+        }),
         columnHelper.accessor('text', {
           header: 'توضیحات',
           cell: ({ getValue }) => <div className="text-center">{getValue()}</div>,
@@ -118,46 +142,85 @@ function VideosListsPage() {
         columnHelper.accessor('view', {
           header: 'بازدید',
         }),
-        columnHelper.accessor('created_at', {
+        columnHelper.accessor((row) => row.processingStatus ?? 'ready', {
+          id: 'processingStatus',
+          header: 'HLS',
+          cell: ({ getValue }) => {
+            const status = String(getValue());
+            return (
+              <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
+                {PROCESSING_LABELS[status] ?? status}
+              </span>
+            );
+          },
+        }),
+        columnHelper.accessor((row) => row.createdAt ?? row.created_at, {
+          id: 'created_at',
           header: 'تاریخ ایجاد',
-          cell: ({ getValue }) => shamsi(getValue(), 'YYYY/MM/DD'),
+          cell: ({ getValue }) => shamsi(String(getValue()), 'YYYY/MM/DD'),
         }),
         columnHelper.display({
           ...dataTableActionsColumnDefaults,
           cell: ({ row }) => (
             <div className="inline-flex items-center justify-center gap-1">
-              <IconButton
-                className="update-btn"
-                icon="ki-solid ki-pencil"
-                onClick={() => {
-                  setUpdateId(row.original.id);
-                  setShowUpdate(true);
-                }}
-                tooltipText="بروزرسانی"
-              />
-              <IconButton
-                className="trash-btn"
-                icon="ki-solid ki-trash"
-                onClick={() => handleOpenConfirmModal(row.original.id)}
-                tooltipText="حذف فایل ویدیویی"
-              />
+              <CanAccess I="update" a="Video">
+                <IconButton
+                  className="update-btn"
+                  icon="ki-solid ki-pencil"
+                  onClick={() => {
+                    setUpdateId(row.original.id);
+                    setShowUpdate(true);
+                  }}
+                  tooltipText="بروزرسانی"
+                />
+              </CanAccess>
+              <CanAccess I="update" a="Video">
+                <IconButton
+                  className="update-btn"
+                  icon="ki-solid ki-arrows-circle"
+                  disabled={isReprocessing}
+                  onClick={() => {
+                    void reprocessMutate(row.original.id)
+                      .then((res) => {
+                        handleResponse(res, null, 'پردازش HLS در صف قرار گرفت', '');
+                        void refetch();
+                      })
+                      .catch((error) => {
+                        handleResponse(null, error, '', 'پردازش مجدد ناموفق بود');
+                      });
+                  }}
+                  tooltipText="تولید مجدد HLS"
+                />
+              </CanAccess>
+              <CanAccess I="delete" a="Video">
+                <IconButton
+                  className="trash-btn"
+                  icon="ki-solid ki-trash"
+                  onClick={() => handleOpenConfirmModal(row.original.id)}
+                  tooltipText="حذف فایل ویدیویی"
+                />
+              </CanAccess>
             </div>
           ),
         }),
       ]),
-    [],
+    [canDelete, canUpdate, isReprocessing, reprocessMutate, refetch],
   );
 
   return (
     <DashboardPanel
       title="لیست ویدیوها"
-      buttons={[
-        {
-          icon: 'ki-solid ki-plus-square',
-          title: 'ایجاد ویدیو',
-          onClick: () => setShowCreate(true),
-        },
-      ]}
+      buttons={
+        canCreate
+          ? [
+              {
+                icon: 'ki-solid ki-plus-square',
+                title: 'ایجاد ویدیو',
+                onClick: () => setShowCreate(true),
+              },
+            ]
+          : []
+      }
     >
       <DataTable
         columns={columns}
@@ -174,11 +237,15 @@ function VideosListsPage() {
           setLimit(nextLimit);
         }}
         isBulkDeleting={isPending}
-        onBulkDelete={(ids, clearSelection) => {
-          clearSelectionRef.current = clearSelection;
-          setSelectedIds(ids.map(Number));
-          setShowConfirm(true);
-        }}
+        onBulkDelete={
+          canDelete
+            ? (ids, clearSelection) => {
+                clearSelectionRef.current = clearSelection;
+                setSelectedIds(ids.map(Number));
+                setShowConfirm(true);
+              }
+            : undefined
+        }
       />
 
       <ConfirmModal

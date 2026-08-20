@@ -23,6 +23,7 @@ export const MINIO_BUCKETS = {
   VIDEO: 'video-bucket',
   GALLERY: 'gallery-bucket',
   POSTER: 'poster-bucket',
+  TWEETS: 'tweets-bucket',
 } as const;
 
 export const MAX_IMAGE_UPLOAD_SIZE_BYTES = 30 * 1024 * 1024;

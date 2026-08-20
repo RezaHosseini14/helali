@@ -16,6 +16,7 @@
     "db:migrate:dev": "npm run env:sync && npm run db:migrate:dev -w @helali/backend",
     "db:seed": "npm run env:sync && npm run db:seed -w @helali/backend",
     "deploy:infra": "node scripts/deploy-infra.mjs",
+    "deploy:backend": "node scripts/deploy-backend.mjs",
     "dev:backend": "npm run env:sync && npm run dev -w @helali/backend",
     "dev:frontend": "npm run env:sync && npm run dev -w @helali/frontend",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",

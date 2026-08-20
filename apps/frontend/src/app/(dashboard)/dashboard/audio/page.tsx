@@ -18,6 +18,8 @@ import DashboardPanel from '@/components/global/DashboardPanel';
 import IconButton from '@/components/global/IconButton';
 import CreateAudioModal from '@/components/pages/dashboard/audio/CreateAudio.modal';
 import UpdateAudioModal from '@/components/pages/dashboard/audio/UpdateAudio.modal';
+import { CanAccess } from '@/features/auth/components/can-access';
+import { useAppAbility } from '@/features/auth/context/ability-provider';
 import { handleResponse, shamsi } from 'utils/functions';
 import { allAudio, deleteAudio } from 'services/audio/audioServices';
 
@@ -35,6 +37,10 @@ interface IAudioRow {
 const columnHelper = createColumnHelper<DataTableFeatures, IAudioRow>();
 
 function AudiosListsPage() {
+  const ability = useAppAbility();
+  const canCreate = ability.can('create', 'Audio');
+  const canUpdate = ability.can('update', 'Audio');
+  const canDelete = ability.can('delete', 'Audio');
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [limit, setLimit] = useState(10);
@@ -126,38 +132,46 @@ function AudiosListsPage() {
           ...dataTableActionsColumnDefaults,
           cell: ({ row }) => (
             <div className="inline-flex items-center justify-center gap-1">
-              <IconButton
-                className="update-btn"
-                icon="ki-solid ki-pencil"
-                onClick={() => {
-                  setUpdateId(row.original.id);
-                  setShowUpdate(true);
-                }}
-                tooltipText="بروزرسانی"
-              />
-              <IconButton
-                className="trash-btn"
-                icon="ki-solid ki-trash"
-                onClick={() => handleOpenConfirmModal(row.original.id)}
-                tooltipText="حذف فایل صوتی"
-              />
+              <CanAccess I="update" a="Audio">
+                <IconButton
+                  className="update-btn"
+                  icon="ki-solid ki-pencil"
+                  onClick={() => {
+                    setUpdateId(row.original.id);
+                    setShowUpdate(true);
+                  }}
+                  tooltipText="بروزرسانی"
+                />
+              </CanAccess>
+              <CanAccess I="delete" a="Audio">
+                <IconButton
+                  className="trash-btn"
+                  icon="ki-solid ki-trash"
+                  onClick={() => handleOpenConfirmModal(row.original.id)}
+                  tooltipText="حذف فایل صوتی"
+                />
+              </CanAccess>
             </div>
           ),
         }),
       ]),
-    [],
+    [canDelete, canUpdate],
   );
 
   return (
     <DashboardPanel
       title="لیست صوت‌ها"
-      buttons={[
-        {
-          icon: 'ki-solid ki-plus-square',
-          title: 'ایجاد صوت',
-          onClick: () => setShowCreate(true),
-        },
-      ]}
+      buttons={
+        canCreate
+          ? [
+              {
+                icon: 'ki-solid ki-plus-square',
+                title: 'ایجاد صوت',
+                onClick: () => setShowCreate(true),
+              },
+            ]
+          : []
+      }
     >
       <DataTable
         columns={columns}
@@ -174,11 +188,15 @@ function AudiosListsPage() {
           setLimit(nextLimit);
         }}
         isBulkDeleting={isPending}
-        onBulkDelete={(ids, clearSelection) => {
-          clearSelectionRef.current = clearSelection;
-          setSelectedIds(ids.map(Number));
-          setShowConfirm(true);
-        }}
+        onBulkDelete={
+          canDelete
+            ? (ids, clearSelection) => {
+                clearSelectionRef.current = clearSelection;
+                setSelectedIds(ids.map(Number));
+                setShowConfirm(true);
+              }
+            : undefined
+        }
       />
 
       <ConfirmModal

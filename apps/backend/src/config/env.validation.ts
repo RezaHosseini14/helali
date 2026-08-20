@@ -21,6 +21,18 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   NODE_ENV?: string;
+
+  @IsOptional()
+  @IsString()
+  TWEETS_USERNAME?: string;
+
+  @IsOptional()
+  @IsString()
+  TWEETS_SYNC_CRON?: string;
+
+  @IsOptional()
+  @IsString()
+  TWEETS_FEED_INSTANCES?: string;
 }
 
 export function validateEnvironment(config: Record<string, unknown>): EnvironmentVariables {

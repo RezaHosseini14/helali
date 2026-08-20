@@ -9,6 +9,7 @@ import { buildSafeStorageFileName, MINIO_BUCKETS } from '@helali/shared';
 
 import { CategoriesRepository } from '@/features/categories/categories.repository';
 import { AudioRepository } from '@/features/audio/audio.repository';
+import { VideoTranscodeService } from '@/features/media-processing/video-transcode.service';
 import {
   BadRequestMessage,
   NotFoundMessage,
@@ -17,6 +18,7 @@ import {
 import { ApiCacheService } from '@/shared/cache/api-cache.service';
 import { StorageService } from '@/shared/storage/storage.service';
 import { MediaViewService } from '@/shared/media-view/media-view.service';
+import { MediaDailyStatService } from '@/shared/media-stats/media-daily-stat.service';
 import { optimizeImageToWebp } from '@/shared/upload/image-optimize';
 import { validateUploadFile } from '@/shared/upload/upload-validation';
 
@@ -41,6 +43,8 @@ export class VideoService {
     private readonly categoriesRepository: CategoriesRepository,
     private readonly storageService: StorageService,
     private readonly mediaViewService: MediaViewService,
+    private readonly mediaDailyStatService: MediaDailyStatService,
+    private readonly videoTranscodeService: VideoTranscodeService,
     private readonly apiCacheService: ApiCacheService,
   ) {}
 
@@ -101,6 +105,7 @@ export class VideoService {
       }
 
       await this.apiCacheService.bumpVersion(CACHE_NAMESPACE);
+      await this.videoTranscodeService.enqueue(createdVideo.id);
 
       return { message: PublicMessage.UploadedFiles };
     } catch (error) {
@@ -161,6 +166,27 @@ export class VideoService {
     }
   }
 
+  async findSuggestions(id: number, limit = 5) {
+    try {
+      const exists = await this.videoRepository.findViewStats(id);
+
+      if (!exists) {
+        throw new NotFoundException(NotFoundMessage.NotFoundVideo);
+      }
+
+      const items = await this.videoRepository.findSuggestions(id, limit);
+      const videos = await Promise.all(items.map((item) => this.mapVideoWithUrls(item)));
+
+      return { videos };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException(BadRequestMessage.FailedFetchingData);
+    }
+  }
+
   async findStories() {
     try {
       const version = await this.apiCacheService.getVersion(CACHE_NAMESPACE);
@@ -182,17 +208,36 @@ export class VideoService {
     }
   }
 
-  async like(id: number) {
+  async like(id: number, visitorKey: string) {
     try {
+      const shouldCount = await this.mediaViewService.tryClaimLike('video', id, visitorKey);
+
+      if (!shouldCount) {
+        const stats = await this.videoRepository.findViewStats(id);
+
+        if (!stats) {
+          throw new NotFoundException(NotFoundMessage.NotFoundVideo);
+        }
+
+        return {
+          message: PublicMessage.LikeAlreadyCounted,
+          likes: stats.like,
+          counted: false as const,
+        };
+      }
+
       const updated = await this.videoRepository.incrementLike(id);
 
       if (!updated) {
         throw new NotFoundException(NotFoundMessage.NotFoundVideo);
       }
 
+      await this.mediaDailyStatService.recordLike('video', id);
+
       return {
         message: PublicMessage.Like,
         likes: updated.like,
+        counted: true as const,
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -227,6 +272,8 @@ export class VideoService {
         throw new NotFoundException(NotFoundMessage.NotFoundVideo);
       }
 
+      await this.mediaDailyStatService.recordView('video', id);
+
       return {
         message: PublicMessage.ViewCounted,
         views: updated.view,
@@ -249,6 +296,10 @@ export class VideoService {
         throw new NotFoundException(NotFoundMessage.NotFoundVideo);
       }
 
+      if (video.hlsPrefix) {
+        await this.storageService.deletePrefix(MINIO_BUCKETS.VIDEO, video.hlsPrefix);
+      }
+
       await this.storageService.deleteFiles([
         { bucketName: MINIO_BUCKETS.VIDEO, fileName: video.originalName },
         { bucketName: MINIO_BUCKETS.POSTER, fileName: video.posterOriginalName },
@@ -266,6 +317,19 @@ export class VideoService {
 
       throw new InternalServerErrorException(BadRequestMessage.FailedDelete);
     }
+  }
+
+  async reprocess(id: number) {
+    const video = await this.videoRepository.findById(id);
+
+    if (!video) {
+      throw new NotFoundException(NotFoundMessage.NotFoundVideo);
+    }
+
+    await this.videoTranscodeService.enqueue(id);
+    await this.apiCacheService.bumpVersion(CACHE_NAMESPACE);
+
+    return { message: 'پردازش مجدد HLS در صف قرار گرفت' };
   }
 
   async update(
@@ -400,6 +464,13 @@ export class VideoService {
 
         await this.apiCacheService.bumpVersion(CACHE_NAMESPACE);
 
+        if (videoFile) {
+          if (video.hlsPrefix) {
+            await this.storageService.deletePrefix(MINIO_BUCKETS.VIDEO, video.hlsPrefix);
+          }
+          await this.videoTranscodeService.enqueue(id);
+        }
+
         return { message: PublicMessage.Updated };
       } catch (innerError) {
         if (uploadedObjects.length > 0) {
@@ -494,6 +565,17 @@ export class VideoService {
       posterSize: video.posterSize,
       like: video.like,
       view: video.view,
+      processingStatus:
+        'processingStatus' in video ? video.processingStatus : 'ready',
+      hlsMasterKey: 'hlsMasterKey' in video ? video.hlsMasterKey : null,
+      hlsPrefix: 'hlsPrefix' in video ? video.hlsPrefix : null,
+      durationSec: 'durationSec' in video ? video.durationSec : null,
+      processingError: 'processingError' in video ? video.processingError : null,
+      processedAt: 'processedAt' in video ? video.processedAt : null,
+      hlsUrl:
+        'hlsMasterKey' in video && video.hlsMasterKey
+          ? this.storageService.getPublicObjectUrl(MINIO_BUCKETS.VIDEO, video.hlsMasterKey)
+          : null,
       createdAt: video.createdAt,
       updatedAt: video.updatedAt,
       categories: 'categories' in video ? video.categories.map((item) => item.categoryId) : [],

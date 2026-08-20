@@ -11,6 +11,7 @@ import DownloadButton from '@/components/global/DownloadButton';
 import ShareButton from '@/components/global/ShareButton';
 import VideoPlayer from '@/components/global/VideoPlayer';
 import RelatedMediaLink from '@/components/pages/front/RelatedMediaLink';
+import { resolveVideoPlaybackSource } from '@/lib/video-playback';
 import type { videoTypes } from 'types/video.type';
 import VideoDetailsLoading from './VideoDetailsLoading';
 
@@ -18,6 +19,9 @@ interface IVideoDetailsProps {
   video?: videoTypes;
   isLoading: boolean;
   onPlay?: () => void;
+  onLike?: () => void;
+  likes?: number;
+  hasLiked?: boolean;
 }
 
 function VideoDetails(props: IVideoDetailsProps) {
@@ -25,17 +29,32 @@ function VideoDetails(props: IVideoDetailsProps) {
     return <VideoDetailsLoading />;
   }
 
+  const playback = resolveVideoPlaybackSource(props.video);
+
   return (
     <article className="overflow-hidden rounded-3xl border border-border/60 bg-card shadow-mainshadow">
       <div className="aspect-video w-full overflow-hidden bg-mainstructure">
         <VideoPlayer
           variant="plain"
-          src={props.video.path}
+          src={playback.src}
+          mimeType={playback.mimeType}
           poster={props.video.posterPath}
           title={props.video.title}
           onPlay={props.onPlay}
         />
       </div>
+
+      {(props.video.processingStatus === 'pending' ||
+        props.video.processingStatus === 'processing') && (
+        <div className="border-b border-border/50 bg-secondary/50 px-5 py-2 text-center text-xs text-muted-foreground sm:px-6">
+          کیفیت‌های تطبیقی در حال آماده‌سازی است — فعلاً پخش معمولی فعال است.
+        </div>
+      )}
+      {props.video.processingStatus === 'failed' && (
+        <div className="border-b border-border/50 bg-destructive/5 px-5 py-2 text-center text-xs text-destructive sm:px-6">
+          آماده‌سازی HLS ناموفق بود — پخش progressive فعال است.
+        </div>
+      )}
 
       <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -55,14 +74,19 @@ function VideoDetails(props: IVideoDetailsProps) {
               type="button"
               size="sm"
               aria-label="پسندیدن"
+              disabled={props.hasLiked}
+              onClick={props.onLike}
               className={cn(
                 'h-10 gap-2 rounded-full border border-rose-200/80 bg-rose-50 px-4 text-rose-600 shadow-none',
                 'hover:border-rose-300 hover:bg-rose-500 hover:text-white',
                 'transition-all duration-200',
+                props.hasLiked && 'border-rose-400 bg-rose-500 text-white',
               )}
             >
               <Icon icon="solar:heart-bold-duotone" className="size-5" />
-              <span className="font-medium tabular-nums">{props.video.like ?? 0}</span>
+              <span className="font-medium tabular-nums">
+                {props.likes ?? props.video.like ?? 0}
+              </span>
             </Button>
             <span
               className={cn(

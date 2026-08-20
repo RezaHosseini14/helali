@@ -42,7 +42,19 @@ async function bootstrap(): Promise<void> {
   app.use(cookieParser());
   app.useStaticAssets(storageRoot, {
     prefix: '/files/',
-    setHeaders: (res) => {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.m3u8')) {
+        res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        res.setHeader('Cache-Control', 'public, max-age=60');
+        return;
+      }
+
+      if (filePath.endsWith('.ts')) {
+        res.setHeader('Content-Type', 'video/mp2t');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        return;
+      }
+
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     },
   });
@@ -50,7 +62,17 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(createValidationPipe());
 
   const port = parseInt(process.env.BACKEND_PORT ?? process.env.PORT ?? '4000', 10);
-  await app.listen(port);
+  const server = await app.listen(port);
+
+  server.on('clientError', (error: NodeJS.ErrnoException, socket) => {
+    if (error.code === 'ECONNRESET' || error.code === 'EPIPE') {
+      socket.destroy();
+      return;
+    }
+
+    console.error('HTTP client error:', error);
+    socket.destroy();
+  });
 
   console.log(`Backend running on http://localhost:${port}/api/v1`);
   console.log(`Local media files: http://localhost:${port}/files/ (root=${storageRoot})`);

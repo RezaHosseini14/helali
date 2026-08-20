@@ -40,6 +40,10 @@ export function likeAudio(id: number) {
   return http.post(`/audio/${id}/like`);
 }
 
+export function audioSuggestions(id: number, limit = 5) {
+  return http.get(`/audio/${id}/suggestions`, { params: { limit } });
+}
+
 export function viewAudio(id: number) {
   return http.post(`/audio/${id}/view`);
 }

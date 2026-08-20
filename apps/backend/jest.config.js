@@ -3,7 +3,7 @@ module.exports = {
   rootDir: '.',
   testRegex: '.*\\.(spec|e2e-spec)\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
+    '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
   testPathIgnorePatterns: ['/node_modules/', '/dist/'],
   collectCoverageFrom: ['src/**/*.ts', '!src/main.ts'],

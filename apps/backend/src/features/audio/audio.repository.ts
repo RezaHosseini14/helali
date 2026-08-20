@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Audio } from '@prisma/client';
 
+import { rankSuggestionCandidates } from '@/shared/media-suggestions/score-suggestions';
 import { PrismaService } from '@/shared/prisma/prisma.service';
 
 const audioCategorySelect = {
@@ -105,10 +106,59 @@ export class AudioRepository {
     });
   }
 
-  async findViewStats(id: number): Promise<{ view: number } | null> {
+  async findSuggestions(id: number, limit: number): Promise<IAudioListItem[]> {
+    const source = await this.prisma.audio.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        categories: { select: { categoryId: true } },
+      },
+    });
+
+    if (!source) {
+      return [];
+    }
+
+    const categoryIds = source.categories.map((item) => item.categoryId);
+    const candidateLimit = Math.max(limit * 8, 40);
+
+    let candidates: IAudioListItem[] = [];
+
+    if (categoryIds.length > 0) {
+      candidates = await this.prisma.audio.findMany({
+        where: {
+          id: { not: id },
+          categories: {
+            some: {
+              categoryId: { in: categoryIds },
+            },
+          },
+        },
+        select: audioListSelect,
+        take: candidateLimit,
+      });
+    }
+
+    if (candidates.length < limit) {
+      const existingIds = new Set([id, ...candidates.map((item) => item.id)]);
+      const fallback = await this.prisma.audio.findMany({
+        where: {
+          id: { notIn: [...existingIds] },
+        },
+        select: audioListSelect,
+        orderBy: [{ view: 'desc' }, { createdAt: 'desc' }],
+        take: limit * 4,
+      });
+      candidates = [...candidates, ...fallback];
+    }
+
+    return rankSuggestionCandidates(candidates, categoryIds, limit);
+  }
+
+  async findViewStats(id: number): Promise<{ view: number; like: number } | null> {
     return this.prisma.audio.findUnique({
       where: { id },
-      select: { view: true },
+      select: { view: true, like: true },
     });
   }
 

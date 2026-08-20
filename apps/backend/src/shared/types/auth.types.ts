@@ -3,6 +3,7 @@ export { REFRESH_TOKEN_COOKIE } from '@helali/shared';
 export interface IJwtPayload {
   readonly sub: number;
   readonly username: string;
+  readonly roleId: number;
   readonly role: string;
   readonly firstName: string;
   readonly lastName: string;
@@ -15,6 +16,7 @@ export interface IJwtPayload {
 export interface IRefreshJwtPayload {
   readonly sub: number;
   readonly username: string;
+  readonly roleId: number;
   readonly role: string;
   readonly firstName: string;
   readonly lastName: string;
@@ -29,6 +31,7 @@ export interface IRefreshJwtPayload {
 export interface IAuthenticatedUser {
   readonly id: number;
   readonly username: string;
+  readonly roleId: number;
   readonly role: string;
   readonly firstName: string;
   readonly lastName: string;

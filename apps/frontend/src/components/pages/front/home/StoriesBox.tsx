@@ -21,6 +21,8 @@ export interface IStory {
   text: string;
   posterOriginalName: string;
   posterPath: string;
+  processingStatus?: 'pending' | 'processing' | 'ready' | 'failed';
+  hlsUrl?: string | null;
   created_at: string;
 }
 

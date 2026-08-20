@@ -1,6 +1,6 @@
 import { AbilityBuilder, createMongoAbility } from '@casl/ability';
 
-import { getPermissionsForRole, ROLE_NAMES } from '../constants';
+import { ROLE_NAMES } from '../constants';
 import { isAdminRole } from '../utils/roles';
 
 import { PERMISSION_RULES } from './permission-rules';
@@ -12,14 +12,14 @@ function normalizeAbilityUser(user: IAbilityUser | string): Required<IAbilityUse
     return {
       id: 0,
       role: user,
-      permissions: [...getPermissionsForRole(user)],
+      permissions: [],
     };
   }
 
   return {
     id: user.id,
     role: user.role,
-    permissions: [...(user.permissions ?? getPermissionsForRole(user.role))],
+    permissions: [...(user.permissions ?? [])],
   };
 }
 

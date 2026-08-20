@@ -9,6 +9,7 @@ import 'swiper/css';
 
 import VideoPlayer from '@/components/global/VideoPlayer';
 import { playMediaSafely } from '@/lib/play-media';
+import { resolveVideoPlaybackSource } from '@/lib/video-playback';
 
 import type { IStory } from './StoriesBox';
 
@@ -180,11 +181,14 @@ function ReelsStoryViewer({ stories, initialIndex, onClose }: IReelsStoryViewerP
           onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
           className="h-full w-full"
         >
-          {stories.map((story, index) => (
+          {stories.map((story, index) => {
+            const playback = resolveVideoPlaybackSource(story);
+
+            return (
             <SwiperSlide key={story.id} className="relative h-full bg-black">
               <VideoPlayer
-                src={story.path}
-                mimeType={story.mimetype}
+                src={playback.src}
+                mimeType={playback.mimeType}
                 title={story.title}
                 poster={story.posterPath}
                 controls={false}
@@ -215,7 +219,8 @@ function ReelsStoryViewer({ stories, initialIndex, onClose }: IReelsStoryViewerP
                 onClick={goNext}
               />
             </SwiperSlide>
-          ))}
+            );
+          })}
         </Swiper>
 
         {isPaused ? (

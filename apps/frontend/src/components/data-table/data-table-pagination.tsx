@@ -1,14 +1,16 @@
 'use client';
 
 import type { ReactTable, RowData } from '@tanstack/react-table';
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronsLeftIcon,
-  ChevronsRightIcon,
-} from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import {
   Select,
   SelectContent,
@@ -19,10 +21,32 @@ import {
 
 import type { DataTableFeatures } from './data-table-features';
 
+type TPageItem = number | 'ellipsis-start' | 'ellipsis-end';
+
 interface IDataTablePaginationProps<TData extends RowData> {
   readonly table: ReactTable<DataTableFeatures, TData>;
   readonly totalItems?: number;
   readonly pageSizeOptions?: ReadonlyArray<number>;
+}
+
+function buildPageItems(activePage: number, pageCount: number): TPageItem[] {
+  const windowSize = 5;
+  const half = Math.floor(windowSize / 2);
+  let start = Math.max(1, activePage - half);
+  const end = Math.min(pageCount, start + windowSize - 1);
+  start = Math.max(1, end - windowSize + 1);
+
+  const items: TPageItem[] = [];
+  if (start > 1) {
+    items.push('ellipsis-start');
+  }
+  for (let page = start; page <= end; page += 1) {
+    items.push(page);
+  }
+  if (end < pageCount) {
+    items.push('ellipsis-end');
+  }
+  return items;
 }
 
 export function DataTablePagination<TData extends RowData>({
@@ -35,6 +59,10 @@ export function DataTablePagination<TData extends RowData>({
   const pageSize = table.state.pagination.pageSize;
   const pageIndex = table.state.pagination.pageIndex;
   const pageCount = Math.max(1, table.getPageCount());
+  const activePage = pageIndex + 1;
+  const pageItems = buildPageItems(activePage, pageCount);
+  const canPrevious = table.getCanPreviousPage();
+  const canNext = table.getCanNextPage();
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-4">
@@ -72,54 +100,56 @@ export function DataTablePagination<TData extends RowData>({
           </Select>
         </div>
 
-        <div className="flex min-w-[6.5rem] items-center justify-center text-sm font-medium">
-          صفحه {pageIndex + 1} از {pageCount}
-        </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="hidden lg:inline-flex"
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-            aria-label="صفحه اول"
-          >
-            <ChevronsRightIcon />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            aria-label="صفحه قبل"
-          >
-            <ChevronRightIcon />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            aria-label="صفحه بعد"
-          >
-            <ChevronLeftIcon />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="hidden lg:inline-flex"
-            onClick={() => table.setPageIndex(pageCount - 1)}
-            disabled={!table.getCanNextPage()}
-            aria-label="صفحه آخر"
-          >
-            <ChevronsLeftIcon />
-          </Button>
-        </div>
+        <Pagination className="mx-0 w-auto">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                aria-disabled={!canPrevious}
+                className={!canPrevious ? 'pointer-events-none opacity-50' : undefined}
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (canPrevious) {
+                    table.previousPage();
+                  }
+                }}
+              />
+            </PaginationItem>
+            {pageItems.map((item) =>
+              item === 'ellipsis-start' || item === 'ellipsis-end' ? (
+                <PaginationItem key={item}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={item}>
+                  <PaginationLink
+                    href="#"
+                    isActive={item === activePage}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      table.setPageIndex(item - 1);
+                    }}
+                  >
+                    {item}
+                  </PaginationLink>
+                </PaginationItem>
+              ),
+            )}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                aria-disabled={!canNext}
+                className={!canNext ? 'pointer-events-none opacity-50' : undefined}
+                onClick={(event) => {
+                  event.preventDefault();
+                  if (canNext) {
+                    table.nextPage();
+                  }
+                }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );

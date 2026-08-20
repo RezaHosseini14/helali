@@ -25,6 +25,9 @@ interface IAudioDetailsProps {
   isPlaying: boolean;
   isActive: boolean;
   isLoading: boolean;
+  onLike?: () => void;
+  likes?: number;
+  hasLiked?: boolean;
 }
 
 function AudioDetails(props: IAudioDetailsProps) {
@@ -136,14 +139,19 @@ function AudioDetails(props: IAudioDetailsProps) {
             type="button"
             size="sm"
             aria-label="پسندیدن"
+            disabled={props.hasLiked}
+            onClick={props.onLike}
             className={cn(
               'h-10 gap-2 rounded-full border border-rose-200/80 bg-rose-50 px-4 text-rose-600 shadow-none',
               'hover:border-rose-300 hover:bg-rose-500 hover:text-white',
               'transition-all duration-200',
+              props.hasLiked && 'border-rose-400 bg-rose-500 text-white',
             )}
           >
             <Icon icon="solar:heart-bold-duotone" className="size-5" />
-            <span className="font-medium tabular-nums">{props.audio.like ?? 0}</span>
+            <span className="font-medium tabular-nums">
+              {props.likes ?? props.audio.like ?? 0}
+            </span>
           </Button>
           <span
             className={cn(

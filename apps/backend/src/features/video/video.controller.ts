@@ -93,6 +93,21 @@ export class VideoController {
   }
 
   @Public()
+  @Get(':id/suggestions')
+  async findSuggestions(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const limit = Math.min(Math.max(Number(limitRaw) || 5, 1), 20);
+    const data = await this.videoService.findSuggestions(id, limit);
+
+    return {
+      message: 'پیشنهادهای ویدیو دریافت شد',
+      data,
+    };
+  }
+
+  @Public()
   @Get(':id')
   async findById(@Param('id', ParseIntPipe) id: number) {
     const data = await this.videoService.findById(id);
@@ -106,12 +121,13 @@ export class VideoController {
   @Public()
   @Post(':id/like')
   @HttpCode(HttpStatus.OK)
-  async like(@Param('id', ParseIntPipe) id: number) {
-    const data = await this.videoService.like(id);
+  async like(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
+    const visitorKey = this.mediaViewService.buildVisitorKey(request);
+    const data = await this.videoService.like(id, visitorKey);
 
     return {
       message: data.message,
-      data: { likes: data.likes },
+      data: { likes: data.likes, counted: data.counted },
     };
   }
 
@@ -154,6 +170,18 @@ export class VideoController {
       files.file?.[0],
       files.poster?.[0],
     );
+
+    return {
+      message: result.message,
+      data: null,
+    };
+  }
+
+  @Post(':id/reprocess')
+  @HttpCode(HttpStatus.OK)
+  @CheckAbility({ action: 'update', subject: 'Video' })
+  async reprocess(@Param('id', ParseIntPipe) id: number) {
+    const result = await this.videoService.reprocess(id);
 
     return {
       message: result.message,

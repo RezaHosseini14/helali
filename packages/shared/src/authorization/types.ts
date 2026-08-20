@@ -1,12 +1,20 @@
 import type { ForcedSubject, MongoAbility } from '@casl/ability';
 
-export type AppActions = 'manage' | 'create' | 'read' | 'update' | 'delete';
+export type AppActions =
+  | 'manage'
+  | 'create'
+  | 'read'
+  | 'update'
+  | 'delete'
+  | 'manageRoles';
+
 export type AppSubjects =
   | 'Audio'
   | 'Video'
   | 'Gallery'
   | 'Category'
   | 'Comment'
+  | 'Tweet'
   | 'User'
   | 'Dashboard'
   | 'AuditLog'

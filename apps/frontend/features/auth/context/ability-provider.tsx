@@ -2,11 +2,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import {
-  createAppAbility,
-  getPermissionsForRole,
-  type AppAbility,
-} from '@helali/shared';
+import { createAppAbility, type AppAbility } from '@helali/shared';
 
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 
@@ -17,13 +13,13 @@ export function AbilityProvider({ children }: { readonly children: ReactNode }) 
 
   const ability = useMemo(() => {
     if (!user?.role) {
-      return createAppAbility({ id: 0, role: 'USER', permissions: getPermissionsForRole('USER') });
+      return createAppAbility({ id: 0, role: 'USER', permissions: [] });
     }
 
     return createAppAbility({
       id: user.id,
       role: user.role,
-      permissions: user.permissions ?? getPermissionsForRole(user.role),
+      permissions: user.permissions ?? [],
     });
   }, [user?.id, user?.permissions, user?.role]);
 
