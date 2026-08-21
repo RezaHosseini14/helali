@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { RedisService } from '@/shared/redis/redis.service';
 
@@ -16,8 +17,15 @@ const REDIS_HIT_MEMORY_TTL_SECONDS = 90;
 export class ApiCacheService {
   private readonly logger = new Logger(ApiCacheService.name);
   private readonly memory = new Map<string, IMemoryEntry>();
+  private readonly keyPrefix: string;
 
-  constructor(private readonly redisService: RedisService) {}
+  constructor(
+    private readonly redisService: RedisService,
+    private readonly configService: ConfigService,
+  ) {
+    this.keyPrefix =
+      this.configService.get<string>('redis.apiCachePrefix')?.trim() || 'helali';
+  }
 
   /**
    * Cache version for a namespace. Memory-first: never blocks on Redis when
@@ -66,7 +74,8 @@ export class ApiCacheService {
   }
 
   async getOrSet<T>(key: string, ttlSeconds: number, factory: () => Promise<T>): Promise<T> {
-    const cached = await this.readRaw(key);
+    const scopedKey = this.scopeKey(key);
+    const cached = await this.readRaw(scopedKey);
 
     if (cached) {
       try {
@@ -77,12 +86,33 @@ export class ApiCacheService {
     }
 
     const value = await factory();
-    await this.writeRaw(key, JSON.stringify(value), ttlSeconds);
+    await this.writeRaw(scopedKey, JSON.stringify(value), ttlSeconds);
     return value;
   }
 
   private versionKey(namespace: string): string {
-    return `helali:ver:${namespace}`;
+    return this.scopeKey(`helali:ver:${namespace}`);
+  }
+
+  /**
+   * Prefixes cache keys so environments that share Redis (local + prod)
+   * do not overwrite each other's URL payloads.
+   */
+  private scopeKey(key: string): string {
+    const prefix = this.keyPrefix;
+    if (!prefix || prefix === 'helali') {
+      return key;
+    }
+
+    if (key.startsWith(`${prefix}:`)) {
+      return key;
+    }
+
+    if (key.startsWith('helali:')) {
+      return `${prefix}:${key.slice('helali:'.length)}`;
+    }
+
+    return `${prefix}:${key}`;
   }
 
   private parseVersion(raw: string): number {

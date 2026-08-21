@@ -1,146 +1,74 @@
-'use client';
+import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 
-import { useParams } from 'next/navigation';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useDispatch, useSelector } from 'react-redux';
+import { JsonLd } from '@/components/seo/json-ld';
+import { getPublicAudio } from '@/features/media/services/public-media.server';
+import { buildPageMetadata, mediaJsonLd } from '@/lib/seo';
 
-import type { RootState } from '@/redux/store';
-import { playAudio, togglePlayback } from '@/redux/slices/audioSlice';
-import type { AppDispatch } from '@/redux/store';
+import { AudioDetailClient } from './audio-detail-client';
 
-import { useTrackMediaLike } from '@/features/media/hooks/use-track-media-like';
-import { useTrackMediaView } from '@/features/media/hooks/use-track-media-view';
-import { audioById } from 'services/audio/audioServices';
-import { getApiErrorMessage } from '@/services/get-api-error-message';
-
-import { ErrorState } from '@/components/ui/error-state';
-import CommentsBox from '@/components/pages/front/audioPage/CommentsBox';
-import AudioSuggests from '@/components/pages/front/audioPage/AudioSuggests';
-import AudioDetails from '@/components/pages/front/audioPage/AudioDetails';
-import AudioDetailsLoading from '@/components/pages/front/audioPage/AudioDetailsLoading';
-import type { audioTypes } from 'types/audio.type';
-
-interface IAudioByIdResponse {
-  data?: {
-    audio?: audioTypes;
-  };
+interface IAudioDetailPageProps {
+  params: Promise<{ id: string }>;
 }
 
-export default function AudioPage() {
-  const { id } = useParams();
+function truncateDescription(text: string | undefined, title: string): string {
+  const raw = (text || title).replace(/\s+/g, ' ').trim();
+  if (raw.length <= 160) {
+    return raw;
+  }
+
+  return `${raw.slice(0, 157)}…`;
+}
+
+export async function generateMetadata({
+  params,
+}: IAudioDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
   const audioId = Number(id);
-  const queryClient = useQueryClient();
-  const dispatch = useDispatch<AppDispatch>();
-  const { currentId, isPlaying, isOpen } = useSelector((state: RootState) => state.audio);
+  const audio = await getPublicAudio(audioId);
 
-  const { data, isPending, isError, error, refetch } = useQuery({
-    queryKey: ['audioById', id],
-    queryFn: () => audioById(audioId),
+  if (!audio) {
+    return buildPageMetadata({
+      title: 'صوت یافت نشد',
+      path: `/audio/${id}`,
+      noIndex: true,
+    });
+  }
+
+  return buildPageMetadata({
+    title: audio.title,
+    description: truncateDescription(audio.text, audio.title),
+    path: `/audio/${audio.id}`,
+    image: audio.posterPath,
   });
+}
 
-  const trackView = useTrackMediaView('audio', audioId, {
-    onCounted: (views) => {
-      queryClient.setQueryData(['audioById', id], (current: IAudioByIdResponse | undefined) => {
-        if (!current?.data?.audio) {
-          return current;
-        }
+export default async function AudioDetailPage({ params }: IAudioDetailPageProps) {
+  const { id } = await params;
+  const audioId = Number(id);
 
-        return {
-          ...current,
-          data: {
-            ...current.data,
-            audio: {
-              ...current.data.audio,
-              view: views,
-            },
-          },
-        };
-      });
-    },
-  });
+  if (!Number.isFinite(audioId) || audioId <= 0) {
+    notFound();
+  }
 
-  const audio = data?.data?.audio as audioTypes | undefined;
-  const isThisTrack = currentId === audioId && isOpen;
-  const isThisPlaying = isThisTrack && isPlaying;
-
-  const { like: trackLike, likes, hasLiked } = useTrackMediaLike('audio', audioId, {
-    initialLikes: audio?.like ?? 0,
-    onCounted: (nextLikes) => {
-      queryClient.setQueryData(['audioById', id], (current: IAudioByIdResponse | undefined) => {
-        if (!current?.data?.audio) {
-          return current;
-        }
-
-        return {
-          ...current,
-          data: {
-            ...current.data,
-            audio: {
-              ...current.data.audio,
-              like: nextLikes,
-            },
-          },
-        };
-      });
-    },
-  });
-
-  const handlePlay = () => {
-    if (!audio) {
-      return;
-    }
-
-    if (isThisTrack) {
-      if (!isPlaying) {
-        trackView();
-      }
-      dispatch(togglePlayback());
-      return;
-    }
-
-    trackView();
-    dispatch(playAudio(audio));
-  };
+  const audio = await getPublicAudio(audioId);
 
   return (
-    <div className="relative min-h-[70vh]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top,rgba(15,110,97,0.08),transparent_65%)]" />
-
-      <div className="container relative grid grid-cols-12 gap-6 pt-28 pb-28 lg:gap-8 sm:pb-24">
-        <div className="col-span-12 flex w-full flex-col gap-6 lg:col-span-9 lg:gap-8">
-          {isPending ? (
-            <AudioDetailsLoading />
-          ) : isError ? (
-            <ErrorState
-              title="بارگذاری صوت ناموفق بود"
-              description={getApiErrorMessage(error)}
-              onRetry={() => void refetch()}
-            />
-          ) : !audio ? (
-            <ErrorState
-              title="صوت یافت نشد"
-              description="این فایل صوتی در دسترس نیست یا حذف شده است."
-              onRetry={() => void refetch()}
-            />
-          ) : (
-            <AudioDetails
-              audio={audio}
-              isPlaying={isThisPlaying}
-              isActive={isThisTrack}
-              handlePlay={handlePlay}
-              isLoading={false}
-              onLike={trackLike}
-              likes={likes}
-              hasLiked={hasLiked}
-            />
-          )}
-          <CommentsBox id={audioId} type="audio" />
-        </div>
-
-        <div className="col-span-12 lg:col-span-3">
-          <AudioSuggests currentId={audioId} />
-        </div>
-      </div>
-    </div>
+    <>
+      {audio ? (
+        <JsonLd
+          data={mediaJsonLd({
+            id: audio.id,
+            title: audio.title,
+            description: audio.text,
+            path: `/audio/${audio.id}`,
+            posterUrl: audio.posterPath,
+            kind: 'audio',
+            uploadDate: audio.createdAt || audio.updatedAt,
+          })}
+        />
+      ) : null}
+      <AudioDetailClient audioId={audioId} />
+    </>
   );
 }

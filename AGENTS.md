@@ -10,7 +10,7 @@
 
 **Cursor skills:** `.cursor/skills/` — `create-feature`, `create-query`, `create-service`, `create-module`, `refactor-feature`, `review-code`, `nestjs-expert`.
 
-**Agent skills:** `.agents/skills/` — start frontend with `helali-frontend`; also `tanstack-query`, Vercel React skills, `frontend-design`, `security-*`, `testing-expert`, caveman utilities.
+**Agent skills:** `.agents/skills/` — start frontend with `helali-frontend`; also `tanstack-query`, Vercel React skills, `frontend-design`, `security-*`, `testing-expert`, caveman utilities. SEO: global `next-seo` (hybrid Next Metadata + `optimise-seo`).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

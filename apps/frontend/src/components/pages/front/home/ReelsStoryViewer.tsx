@@ -9,7 +9,6 @@ import 'swiper/css';
 
 import VideoPlayer from '@/components/global/VideoPlayer';
 import { playMediaSafely } from '@/lib/play-media';
-import { resolveVideoPlaybackSource } from '@/lib/video-playback';
 
 import type { IStory } from './StoriesBox';
 
@@ -72,8 +71,13 @@ function ReelsStoryViewer({ stories, initialIndex, onClose }: IReelsStoryViewerP
       }
 
       video.pause();
-      if (index !== activeIndex) {
-        video.currentTime = 0;
+      // Avoid seeking inactive HLS streams (throws / stalls playback).
+      if (index !== activeIndex && Number.isFinite(video.duration) && video.duration > 0) {
+        try {
+          video.currentTime = 0;
+        } catch {
+          // ignore
+        }
       }
     });
   }, [activeIndex, isPaused]);
@@ -88,9 +92,19 @@ function ReelsStoryViewer({ stories, initialIndex, onClose }: IReelsStoryViewerP
       syncSegmentProgress(activeIndex, (currentTime / duration) * 100);
     };
 
+    const handleCanPlay = () => {
+      if (!isPaused) {
+        playMediaSafely(() => video.play());
+      }
+    };
+
     video.addEventListener('timeupdate', handleTimeUpdate);
-    return () => video.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [activeIndex, syncSegmentProgress]);
+    video.addEventListener('canplay', handleCanPlay);
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('canplay', handleCanPlay);
+    };
+  }, [activeIndex, isPaused, syncSegmentProgress]);
 
   const goNext = () => {
     if (activeIndex < stories.length - 1) {
@@ -108,7 +122,11 @@ function ReelsStoryViewer({ stories, initialIndex, onClose }: IReelsStoryViewerP
 
     const video = videoRefs.current[activeIndex];
     if (video) {
-      video.currentTime = 0;
+      try {
+        video.currentTime = 0;
+      } catch {
+        // ignore
+      }
       syncSegmentProgress(activeIndex, 0);
     }
   };
@@ -182,7 +200,11 @@ function ReelsStoryViewer({ stories, initialIndex, onClose }: IReelsStoryViewerP
           className="h-full w-full"
         >
           {stories.map((story, index) => {
-            const playback = resolveVideoPlaybackSource(story);
+            // Progressive MP4 is reliable in the reels modal; HLS + autoplay/seek often stalls.
+            const playback = {
+              src: story.path,
+              mimeType: story.mimetype,
+            };
 
             return (
             <SwiperSlide key={story.id} className="relative h-full bg-black">
@@ -193,6 +215,7 @@ function ReelsStoryViewer({ stories, initialIndex, onClose }: IReelsStoryViewerP
                 poster={story.posterPath}
                 controls={false}
                 variant="plain"
+                muted
                 autoPlay={index === activeIndex}
                 videoRef={(element) => {
                   videoRefs.current[index] = element;

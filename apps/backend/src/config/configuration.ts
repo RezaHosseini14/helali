@@ -26,6 +26,14 @@ export const redisConfig = registerAs('redis', () => ({
   url: process.env.REDIS_URL ?? 'redis://localhost:6379',
   /** Isolates BullMQ keys so local dev workers do not steal production transcode jobs. */
   bullPrefix: process.env.BULLMQ_PREFIX?.trim() || 'helali',
+  /**
+   * Isolates API response cache when local/prod share one Redis.
+   * Without this, local STORAGE_DRIVER=local poisons prod stories with localhost URLs.
+   */
+  apiCachePrefix:
+    process.env.API_CACHE_PREFIX?.trim() ||
+    process.env.BULLMQ_PREFIX?.trim() ||
+    'helali',
 }));
 
 /** RSS fallback instances (primary source is FxTwitter API); see https://status.d420.de/ */

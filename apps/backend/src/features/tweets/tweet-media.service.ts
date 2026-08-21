@@ -4,7 +4,9 @@ import { MINIO_BUCKETS } from '@helali/shared';
 
 import { StorageService } from '@/shared/storage/storage.service';
 
-import type { ITweetDraft } from './tweets.types';
+import type { ITweetDraft, ITweetListItem } from './tweets.types';
+
+const PRESIGNED_URL_EXPIRY_SECONDS = 24 * 60 * 60;
 
 interface IFxMediaItem {
   readonly type?: string;
@@ -109,8 +111,9 @@ export class TweetMediaService {
       return avatarUrl;
     }
 
-    if (avatarUrl.includes('/files/tweets-bucket/') || avatarUrl.includes('/tweets-bucket/')) {
-      return avatarUrl;
+    const existingKey = this.extractTweetsObjectKey(avatarUrl);
+    if (existingKey) {
+      return existingKey;
     }
 
     const controller = new AbortController();
@@ -145,10 +148,73 @@ export class TweetMediaService {
         objectName,
       });
 
-      return this.storageService.getPublicObjectUrl(MINIO_BUCKETS.TWEETS, objectName);
+      // Persist object key only — resolve to env-specific URL on read.
+      return objectName;
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  /**
+   * Rewrites stored tweet media (object keys or legacy localhost/MinIO absolute URLs)
+   * into browser-reachable URLs for the current storage driver.
+   */
+  async resolveTweetItem<TTweet extends ITweetListItem>(tweet: TTweet): Promise<TTweet> {
+    const [avatarUrl, imageUrls, videoUrls, videoPosterUrls] = await Promise.all([
+      this.resolveStoredUrl(tweet.avatarUrl),
+      Promise.all(tweet.imageUrls.map((url) => this.resolveStoredUrl(url))),
+      Promise.all(tweet.videoUrls.map((url) => this.resolveStoredUrl(url))),
+      Promise.all(tweet.videoPosterUrls.map((url) => this.resolveStoredUrl(url))),
+    ]);
+
+    return {
+      ...tweet,
+      avatarUrl,
+      imageUrls: imageUrls.map((url, index) => url ?? tweet.imageUrls[index] ?? ''),
+      videoUrls: videoUrls.map((url, index) => url ?? tweet.videoUrls[index] ?? ''),
+      videoPosterUrls: videoPosterUrls.map(
+        (url, index) => url ?? tweet.videoPosterUrls[index] ?? '',
+      ),
+    };
+  }
+
+  async resolveStoredUrl(url: string | null | undefined): Promise<string | null> {
+    if (!url?.trim()) {
+      return null;
+    }
+
+    const objectKey = this.extractTweetsObjectKey(url);
+    if (!objectKey) {
+      return url;
+    }
+
+    return this.storageService.getPresignedUrl(
+      MINIO_BUCKETS.TWEETS,
+      objectKey,
+      PRESIGNED_URL_EXPIRY_SECONDS,
+    );
+  }
+
+  extractTweetsObjectKey(url: string): string | null {
+    const withoutQuery = (url.split('?')[0] ?? url).trim();
+    if (!withoutQuery) {
+      return null;
+    }
+
+    const markers = ['/files/tweets-bucket/', '/tweets-bucket/'] as const;
+    for (const marker of markers) {
+      const index = withoutQuery.indexOf(marker);
+      if (index >= 0) {
+        return decodeURIComponent(withoutQuery.slice(index + marker.length));
+      }
+    }
+
+    // Already stored as a bucket-relative object key (preferred).
+    if (withoutQuery.startsWith('profiles/') || /^\d{5,}\//.test(withoutQuery)) {
+      return withoutQuery.replace(/^\/+/, '');
+    }
+
+    return null;
   }
 
   private async enrichOne(draft: ITweetDraft): Promise<ITweetDraft> {
@@ -356,8 +422,9 @@ export class TweetMediaService {
     index: number,
     url: string,
   ): Promise<string> {
-    if (url.includes('/files/tweets-bucket/') || url.includes('/tweets-bucket/')) {
-      return url;
+    const existingKey = this.extractTweetsObjectKey(url);
+    if (existingKey) {
+      return existingKey;
     }
 
     const controller = new AbortController();
@@ -392,7 +459,7 @@ export class TweetMediaService {
         objectName,
       });
 
-      return this.storageService.getPublicObjectUrl(MINIO_BUCKETS.TWEETS, objectName);
+      return objectName;
     } finally {
       clearTimeout(timeout);
     }

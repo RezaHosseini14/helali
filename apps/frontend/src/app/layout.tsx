@@ -1,7 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
+import { JsonLd } from '@/components/seo/json-ld';
 import { Providers } from '@/lib/providers';
+import { rootMetadata, siteGraphJsonLd } from '@/lib/seo';
+import { SITE_THEME_COLOR } from '@/lib/site';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import { cn } from '@/lib/utils';
 
@@ -9,9 +12,12 @@ import './globals.css';
 import '@/assets/fonts/keenicons/icon.css';
 import '@/assets/fonts/ERPyb/ERPyb.css';
 
-export const metadata: Metadata = {
-  title: process.env.APP_TITLE,
-  description: 'پایگاه‌حفظ‌ونشر‌آثار‌عبدالرضاهلالی',
+export const metadata: Metadata = rootMetadata();
+
+export const viewport: Viewport = {
+  themeColor: SITE_THEME_COLOR,
+  width: 'device-width',
+  initialScale: 1,
 };
 
 interface IRootLayoutProps {
@@ -25,6 +31,7 @@ export default function RootLayout({ children }: IRootLayoutProps) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body suppressHydrationWarning>
+        <JsonLd data={siteGraphJsonLd()} />
         <Providers>{children}</Providers>
       </body>
     </html>

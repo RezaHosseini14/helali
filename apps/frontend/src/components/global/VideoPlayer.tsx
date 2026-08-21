@@ -34,6 +34,7 @@ interface IVideoPlayerProps {
   readonly variant?: 'boxed' | 'plain';
   readonly controls?: boolean;
   readonly autoPlay?: boolean;
+  readonly muted?: boolean;
   readonly videoRef?: Ref<HTMLVideoElement>;
   readonly onPlay?: () => void;
   readonly onEnded?: () => void;
@@ -47,6 +48,7 @@ type IVideoSourceProps = Pick<
   | 'title'
   | 'poster'
   | 'autoPlay'
+  | 'muted'
   | 'videoRef'
   | 'onPlay'
   | 'onEnded'
@@ -58,6 +60,7 @@ function HlsVideoSource({
   title,
   poster,
   autoPlay,
+  muted = false,
   videoRef,
   onPlay,
   onEnded,
@@ -76,7 +79,8 @@ function HlsVideoSource({
     <video
       ref={ref}
       playsInline
-      preload="metadata"
+      muted={muted}
+      preload="auto"
       poster={poster}
       autoPlay={autoPlay}
       aria-label={videoLabel}
@@ -95,6 +99,7 @@ function ProgressiveVideoSource({
   title,
   poster,
   autoPlay,
+  muted = false,
   videoRef,
   onPlay,
   onEnded,
@@ -105,7 +110,8 @@ function ProgressiveVideoSource({
   const sharedProps = {
     ref: videoRef,
     playsInline: true as const,
-    preload: 'metadata' as const,
+    muted,
+    preload: 'auto' as const,
     poster,
     autoPlay,
     'aria-label': videoLabel,
@@ -146,6 +152,7 @@ export function VideoPlayer({
   variant = 'boxed',
   controls = true,
   autoPlay = false,
+  muted = false,
   videoRef,
   onPlay,
   onEnded,
@@ -162,6 +169,7 @@ export function VideoPlayer({
       title={title}
       poster={controls ? undefined : poster}
       autoPlay={autoPlay}
+      muted={muted}
       videoRef={videoRef}
       onPlay={onPlay}
       onEnded={onEnded}

@@ -48,6 +48,7 @@ jobs:
         run: |
           HOST="${SSH_HOST:-5.159.49.36}"
           echo "api_url=http://${HOST}:4000/api/v1" >> "$GITHUB_OUTPUT"
+          echo "site_url=http://${HOST}:3000" >> "$GITHUB_OUTPUT"
           echo "minio_endpoint=${HOST}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
@@ -71,6 +72,8 @@ jobs:
             ${{ steps.meta.outputs.image }}:latest
           build-args: |
             NEXT_PUBLIC_API_URL=${{ steps.public.outputs.api_url }}
+            NEXT_PUBLIC_SITE_URL=${{ steps.public.outputs.site_url }}
+            APP_TITLE=هلالی
             MINIO_ENDPOINT=${{ steps.public.outputs.minio_endpoint }}
             MINIO_PORT=9010
             MINIO_USE_SSL=false
