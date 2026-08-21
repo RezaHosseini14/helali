@@ -3,10 +3,15 @@ FROM ${NODE_IMAGE} AS base
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json* .npmrc* ./
 COPY apps/frontend/package.json ./apps/frontend/
+COPY apps/backend/package.json ./apps/backend/
 COPY packages/shared/package.json ./packages/shared/
-RUN npm ci --legacy-peer-deps --workspace=@helali/frontend --workspace=@helali/shared --include-workspace-root
+# Root postinstall builds shared + prisma generate (needs backend). Skip scripts in deps stage.
+RUN npm ci --ignore-scripts --legacy-peer-deps \
+  --workspace=@helali/frontend \
+  --workspace=@helali/shared \
+  --include-workspace-root
 
 FROM base AS builder
 ARG NEXT_PUBLIC_API_URL=http://localhost:4000/api/v1
@@ -23,7 +28,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build -w @helali/shared
 RUN npm run build -w @helali/frontend
-
 FROM base AS runner
 ENV NODE_ENV=production
 WORKDIR /app

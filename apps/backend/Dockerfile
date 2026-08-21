@@ -3,12 +3,12 @@ FROM ${NODE_IMAGE} AS base
 WORKDIR /app
 
 FROM base AS deps
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json* .npmrc* ./
 COPY apps/backend/package.json ./apps/backend/
+COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared/package.json ./packages/shared/
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm ci --ignore-scripts --workspace=@helali/backend --workspace=@helali/shared --include-workspace-root
-
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
