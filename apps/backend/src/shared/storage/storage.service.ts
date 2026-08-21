@@ -69,6 +69,8 @@ export class StorageService {
   private readonly localRoot: string;
   private readonly publicBaseUrl: string;
   private readonly minioClient: Client | null;
+  /** Signs browser-facing URLs with public host:port (not the Docker-internal name). */
+  private readonly minioPresignClient: Client | null;
   private readonly ensuredBuckets = new Set<string>();
   private readonly ensuredStreamingAccess = new Set<string>();
   private readonly urlCache = new Map<string, ICachedUrl>();
@@ -84,7 +86,11 @@ export class StorageService {
     if (this.driver === 'minio') {
       const endPoint = this.configService.get<string>('minio.endpoint', 'localhost');
       const port = this.configService.get<number>('minio.port', 9000);
+      const publicEndPoint = this.configService.get<string>('minio.publicEndpoint', endPoint);
+      const publicPort = this.configService.get<number>('minio.publicPort', port);
       const useSSL = this.configService.get<boolean>('minio.useSsl', false);
+      const accessKey = this.configService.get<string>('minio.accessKey', '');
+      const secretKey = this.configService.get<string>('minio.secretKey', '');
       const agent = new http.Agent({
         keepAlive: true,
         keepAliveMsecs: 30_000,
@@ -96,8 +102,8 @@ export class StorageService {
         endPoint,
         port,
         useSSL,
-        accessKey: this.configService.get<string>('minio.accessKey', ''),
-        secretKey: this.configService.get<string>('minio.secretKey', ''),
+        accessKey,
+        secretKey,
         region: 'us-east-1',
         pathStyle: true,
         transportAgent: agent,
@@ -107,8 +113,27 @@ export class StorageService {
           maximumDelayMs: 8_000,
         },
       });
+
+      // Presign with the public host so browsers (outside Docker) can fetch objects.
+      this.minioPresignClient =
+        publicEndPoint === endPoint && publicPort === port
+          ? this.minioClient
+          : new Client({
+              endPoint: publicEndPoint,
+              port: publicPort,
+              useSSL,
+              accessKey,
+              secretKey,
+              region: 'us-east-1',
+              pathStyle: true,
+            });
+
+      this.logger.log(
+        `Storage driver: minio (api=${endPoint}:${port}, public=${publicEndPoint}:${publicPort})`,
+      );
     } else {
       this.minioClient = null;
+      this.minioPresignClient = null;
       this.logger.log(`Storage driver: local (${this.localRoot})`);
     }
   }
@@ -230,7 +255,11 @@ export class StorageService {
     }
 
     try {
-      const url = await this.requireMinio().presignedGetObject(bucketName, fileName, expiresIn);
+      const url = await this.requireMinioPresign().presignedGetObject(
+        bucketName,
+        fileName,
+        expiresIn,
+      );
       this.urlCache.set(cacheKey, {
         url,
         expiresAt: Date.now() + Math.min(URL_CACHE_TTL_MS, Math.max(expiresIn - 60, 60) * 1000),
@@ -510,5 +539,13 @@ export class StorageService {
     }
 
     return this.minioClient;
+  }
+
+  private requireMinioPresign(): Client {
+    if (!this.minioPresignClient) {
+      throw new HttpException('MinIO client is not configured', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    return this.minioPresignClient;
   }
 }
