@@ -1,14 +1,10 @@
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
+import nextTypescript from 'eslint-config-next/typescript';
 
-import { FlatCompat } from '@eslint/eslintrc';
-
-const compat = new FlatCompat({
-  baseDirectory: dirname(fileURLToPath(import.meta.url)),
-});
-
+/** @type {import('eslint').Linter.Config[]} */
 const eslintConfig = [
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...nextCoreWebVitals,
+  ...nextTypescript,
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',

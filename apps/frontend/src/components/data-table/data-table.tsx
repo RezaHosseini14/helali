@@ -45,7 +45,7 @@ export interface IDataTableBulkActionContext {
 
 interface IDataTableProps<TData extends RowData> {
   readonly columns: ColumnDef<DataTableFeatures, TData>[];
-  readonly data: TData[];
+  readonly data: ReadonlyArray<TData>;
   readonly isLoading?: boolean;
   readonly emptyMessage?: string;
   readonly className?: string;

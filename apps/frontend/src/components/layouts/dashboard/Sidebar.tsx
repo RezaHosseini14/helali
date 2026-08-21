@@ -34,26 +34,35 @@ function filterMenuItems(
   ability: AppAbility,
   items: ReadonlyArray<dashboardMenuItemsType>,
 ): dashboardMenuItemsType[] {
-  return items
-    .map((item) => {
-      const children = item.children
-        ? filterMenuItems(ability, item.children)
-        : undefined;
+  const filtered: dashboardMenuItemsType[] = [];
 
-      if (children && children.length === 0) {
-        return null;
-      }
+  for (const item of items) {
+    const children = item.children
+      ? filterMenuItems(ability, item.children)
+      : undefined;
 
-      if (!canAccessMenuItem(ability, item) && (!children || children.length === 0)) {
-        return null;
-      }
+    if (children && children.length === 0) {
+      continue;
+    }
 
-      return {
-        ...item,
-        children,
-      };
-    })
-    .filter((item): item is dashboardMenuItemsType => item !== null);
+    if (!canAccessMenuItem(ability, item) && (!children || children.length === 0)) {
+      continue;
+    }
+
+    filtered.push(
+      children
+        ? {
+            ...item,
+            children,
+          }
+        : {
+            ...item,
+            children: undefined,
+          },
+    );
+  }
+
+  return filtered;
 }
 
 function isPathMatch(pathname: string, url: string): boolean {
