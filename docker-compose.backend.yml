@@ -1,11 +1,9 @@
-# Helali API (includes ffmpeg for HLS). Joins existing helali-network from infra.
-# Usage on server: docker compose -f docker-compose.backend.yml up -d --build
+# Helali API — production pulls a pre-built image from GHCR (no on-server build).
+# IMAGE is set by GitHub Actions, e.g. ghcr.io/<owner>/helali-backend:<git-sha>
 
 services:
   backend:
-    build:
-      context: .
-      dockerfile: apps/backend/Dockerfile
+    image: ${BACKEND_IMAGE}
     container_name: helali-backend
     restart: unless-stopped
     environment:
@@ -13,8 +11,8 @@ services:
       DATABASE_URL: postgresql://root:root@helali-postgres:5432/helali_database?schema=public
       REDIS_URL: redis://helali-redis:6379
       BULLMQ_PREFIX: helali-prod
-      JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret-min-32-chars-long}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret-min-32-chars}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in /opt/helali-app/.env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set JWT_REFRESH_SECRET in /opt/helali-app/.env}
       JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-12h}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
       BACKEND_PORT: 4000
@@ -25,8 +23,8 @@ services:
       MINIO_PORT: 9000
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-5.159.49.36}
       MINIO_PUBLIC_PORT: ${MINIO_PUBLIC_PORT:-9010}
-      MINIO_ACCESS_KEY: minio99
-      MINIO_SECRET_KEY: minio123
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio99}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio123}
       MINIO_USE_SSL: 'false'
       STORAGE_DRIVER: minio
       API_ENCRYPTION_ENABLED: 'false'

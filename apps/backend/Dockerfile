@@ -1,4 +1,5 @@
-FROM docker.arvancloud.ir/library/node:20-alpine AS base
+ARG NODE_IMAGE=node:20-alpine
+FROM ${NODE_IMAGE} AS base
 WORKDIR /app
 
 FROM base AS deps
@@ -23,7 +24,7 @@ ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 WORKDIR /app
 
-RUN apk add --no-cache ffmpeg
+RUN apk add --no-cache ffmpeg wget
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/backend/node_modules ./apps/backend/node_modules

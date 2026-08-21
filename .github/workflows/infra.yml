@@ -1,0 +1,81 @@
+name: Infra
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docker-compose.infra.yml'
+      - '.github/workflows/infra.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: helali-infra-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  REMOTE_DIR: /opt/helali-infra
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          test -n "$SSH_PRIVATE_KEY" || { echo "Missing secret SSH_PRIVATE_KEY"; exit 1; }
+          test -n "$SSH_HOST" || { echo "Missing secret SSH_HOST"; exit 1; }
+          test -n "$SSH_USER" || { echo "Missing secret SSH_USER"; exit 1; }
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload and start infra
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" "mkdir -p ${{ env.REMOTE_DIR }}"
+          scp -i ~/.ssh/id_ed25519 docker-compose.infra.yml \
+            "$SSH_USER@$SSH_HOST:${{ env.REMOTE_DIR }}/docker-compose.infra.yml"
+          ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" bash -s <<EOF
+          set -euo pipefail
+          cd ${{ env.REMOTE_DIR }}
+
+          # Refuse to bind Helali ports if something else already owns them.
+          for port in 5433 6380 9010 9011; do
+            if ss -tlnp | grep -q ":\$port "; then
+              owner=\$(docker ps --format '{{.Names}} {{.Ports}}' | grep ":\$port->" || true)
+              if ! echo "\$owner" | grep -q helali-; then
+                echo "Port \$port is in use by a non-Helali process. Aborting."
+                ss -tlnp | grep ":\$port " || true
+                exit 1
+              fi
+            fi
+          done
+
+          docker compose -f docker-compose.infra.yml up -d
+          docker ps --filter name=helali- --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+          EOF
+
+      - name: Smoke check Postgres / Redis / MinIO ports
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" bash -s <<'EOF'
+          set -euo pipefail
+          docker exec helali-postgres pg_isready -U root -d helali_database
+          docker exec helali-redis redis-cli ping | grep -q PONG
+          docker exec helali-minio curl -sf http://localhost:9000/minio/health/live >/dev/null
+          echo "Infra healthy"
+          EOF

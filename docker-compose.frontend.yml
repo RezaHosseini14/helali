@@ -1,23 +1,16 @@
-# Helali public site (Next.js). Joins existing helali-network from infra.
-# Usage on server: docker compose -f docker-compose.frontend.yml up -d --build
+# Helali public site — production pulls a pre-built image from GHCR (no on-server build).
+# IMAGE is set by GitHub Actions, e.g. ghcr.io/<owner>/helali-frontend:<git-sha>
 
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://5.159.49.36:4000/api/v1}
-        MINIO_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-5.159.49.36}
-        MINIO_PORT: ${MINIO_PUBLIC_PORT:-9010}
-        MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
-        BACKEND_INTERNAL_ORIGIN: ${BACKEND_INTERNAL_ORIGIN:-http://helali-backend:4000}
+    image: ${FRONTEND_IMAGE}
     container_name: helali-frontend
     restart: unless-stopped
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://5.159.49.36:4000/api/v1}
       API_URL: ${API_URL:-http://helali-backend:4000/api/v1}
+      BACKEND_INTERNAL_ORIGIN: ${BACKEND_INTERNAL_ORIGIN:-http://helali-backend:4000}
       MINIO_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-5.159.49.36}
       MINIO_PORT: ${MINIO_PUBLIC_PORT:-9010}
       MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
