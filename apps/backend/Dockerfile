@@ -2,19 +2,16 @@ ARG NODE_IMAGE=node:20-alpine
 FROM ${NODE_IMAGE} AS base
 WORKDIR /app
 
-FROM base AS deps
-COPY package.json package-lock.json* .npmrc* ./
+FROM base AS builder
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
+COPY package.json package-lock.json .npmrc* ./
 COPY apps/backend/package.json ./apps/backend/
 COPY apps/frontend/package.json ./apps/frontend/
 COPY packages/shared/package.json ./packages/shared/
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-RUN npm ci --ignore-scripts --workspace=@helali/backend --workspace=@helali/shared --include-workspace-root
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
+RUN npm ci --ignore-scripts --legacy-peer-deps
+
 COPY . .
-# Workspace may nest some deps under apps/backend/node_modules (see package-lock).
-COPY --from=deps /app/apps/backend/node_modules ./apps/backend/node_modules
-ENV PUPPETEER_SKIP_DOWNLOAD=true
 RUN npm run build -w @helali/shared
 RUN npx prisma generate --schema=apps/backend/prisma/schema.prisma
 RUN npm run build -w @helali/backend

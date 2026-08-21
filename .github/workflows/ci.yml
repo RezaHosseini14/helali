@@ -25,7 +25,9 @@ jobs:
 
       - run: npm run build -w @helali/shared
 
-      - run: npm run lint --workspaces --if-present
+      - run: npm run lint -w @helali/frontend --if-present
+      - run: npm run lint -w @helali/backend --if-present
+      - run: npm run lint -w @helali/shared --if-present
 
   test:
     runs-on: ubuntu-latest
