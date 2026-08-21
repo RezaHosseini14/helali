@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 
 import {
   DataTable,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   FileSizeBadge,
@@ -204,8 +205,8 @@ function GalleriesListsPage() {
               featuredMutation.isPending && featuredMutation.variables?.id === row.original.id;
 
             return (
-              <div className="inline-flex items-center justify-center gap-1">
-                <CanAccess I="update" a="Gallery">
+              <DataTableActions>
+                <CanAccess I="update" a="Gallery" preserveSlot>
                   <IconButton
                     className={
                       isFeatured
@@ -223,7 +224,7 @@ function GalleriesListsPage() {
                     disabled={isFeatureActionPending}
                   />
                 </CanAccess>
-                <CanAccess I="delete" a="Gallery">
+                <CanAccess I="delete" a="Gallery" preserveSlot>
                   <IconButton
                     className="trash-btn"
                     icon="ki-solid ki-trash"
@@ -231,7 +232,7 @@ function GalleriesListsPage() {
                     tooltipText="حذف فایل تصویری"
                   />
                 </CanAccess>
-              </div>
+              </DataTableActions>
             );
           },
         }),

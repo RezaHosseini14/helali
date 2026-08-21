@@ -188,7 +188,9 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div className={cn('flex min-w-0 flex-col gap-2', className)}>
-      {toolbar ? <div className="flex items-center gap-2">{toolbar}</div> : null}
+      {toolbar ? (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">{toolbar}</div>
+      ) : null}
 
       {showBulkBar ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2.5">

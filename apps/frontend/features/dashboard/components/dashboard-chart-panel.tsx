@@ -30,12 +30,12 @@ export function DashboardChartPanel({
   headerExtra,
   className,
   isLoading = false,
-  chartHeightClassName = 'h-[16rem] sm:h-[17.5rem]',
+  chartHeightClassName = 'h-[14rem] sm:h-[16rem] md:h-[17.5rem]',
 }: IChartPanelProps) {
   return (
     <section
       className={cn(
-        'group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm backdrop-blur-sm',
+        'group relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-3 shadow-sm backdrop-blur-sm sm:p-4',
         className,
       )}
       aria-busy={isLoading}

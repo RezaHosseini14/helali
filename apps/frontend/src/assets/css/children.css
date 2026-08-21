@@ -115,63 +115,29 @@ body.children {
   z-index: -1;
 }
 
-.notch-box {
-  width: 6rem;
-  height: 6rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 8px solid #ffffff;
-  border-radius: 24px;
-  position: absolute;
-  background-color: inherit;
-  top: -8px;
-  right: -8px;
+.children-hero-sparkle {
+  background-image:
+    radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.55) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 78% 22%, rgba(255, 245, 180, 0.7) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 62% 68%, rgba(255, 255, 255, 0.45) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 30% 72%, rgba(255, 240, 160, 0.5) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 88% 58%, rgba(255, 255, 255, 0.4) 0 1.5px, transparent 2px);
 }
 
-.notch-box::before {
-  position: absolute;
-  content: '';
-  width: 27px;
-  height: 27px;
-  top: 0px;
-  right: 144px;
-  background-color: #af414100;
-  box-shadow: 11px -3px 0px 0px #ffffff;
-  border-top-right-radius: 15px;
+.children-hero-character {
+  filter: saturate(1.05) contrast(1.02);
 }
 
-.notch-box::after {
-  position: absolute;
-  content: '';
-  width: 27px;
-  height: 27px;
-  top: 144px;
-  right: 0;
-  background-color: #ffffff00;
-  box-shadow: 5px -3px 0px 0px #ffffff;
-  border-top-right-radius: 24px;
+@media (max-width: 640px) {
+  .love::before {
+    width: 8rem;
+    height: 6.5rem;
+  }
 }
 
-.children-header-noutch::after {
-  content: '';
-  border-bottom-right-radius: 2rem;
-  box-shadow: 0.5rem 0.8rem var(--children-color);
-  position: absolute;
-  left: 24.5rem;
-  bottom: 0px;
-  width: 4rem;
-  height: 4rem;
-}
-
-.children-header-noutch::before {
-  content: '';
-  border-bottom-left-radius: 2rem;
-  box-shadow: -0.5rem 0.8rem var(--children-color);
-  position: absolute;
-  right: 24.6rem;
-  bottom: 0px;
-  width: 4rem;
-  height: 4rem;
-  z-index: 1111;
+@media (prefers-reduced-motion: reduce) {
+  .star,
+  .children-story-moon {
+    animation: none !important;
+  }
 }

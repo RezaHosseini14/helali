@@ -1,0 +1,38 @@
+# Helali public site (Next.js). Joins existing helali-network from infra.
+# Usage on server: docker compose -f docker-compose.frontend.yml up -d --build
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://5.159.49.36:4000/api/v1}
+        MINIO_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-5.159.49.36}
+        MINIO_PORT: ${MINIO_PUBLIC_PORT:-9010}
+        MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+        BACKEND_INTERNAL_ORIGIN: ${BACKEND_INTERNAL_ORIGIN:-http://helali-backend:4000}
+    container_name: helali-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://5.159.49.36:4000/api/v1}
+      API_URL: ${API_URL:-http://helali-backend:4000/api/v1}
+      MINIO_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-5.159.49.36}
+      MINIO_PORT: ${MINIO_PUBLIC_PORT:-9010}
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+    ports:
+      - '3010:3000'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - helali-network
+
+networks:
+  helali-network:
+    external: true
+    name: helali-network

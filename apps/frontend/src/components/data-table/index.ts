@@ -1,4 +1,9 @@
 export {
+  DataTableActionPlaceholder,
+  DataTableActionSlot,
+  DataTableActions,
+} from './data-table-action-placeholder';
+export {
   DATA_TABLE_ACTIONS_SIZE,
   dataTableActionsColumnDefaults,
 } from './data-table-actions';

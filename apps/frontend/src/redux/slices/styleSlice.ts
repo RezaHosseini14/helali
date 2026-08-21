@@ -18,6 +18,9 @@ export const styleSlice = createSlice({
     TOGGLE_SIDEBAR: (state) => {
       state.sidebarStatus = !state.sidebarStatus;
     },
+    SET_SIDEBAR: (state, action: PayloadAction<boolean>) => {
+      state.sidebarStatus = action.payload;
+    },
     TOGGLE_DARK_MODE: (state) => {
       state.darkMode = !state.darkMode;
     },
@@ -27,6 +30,7 @@ export const styleSlice = createSlice({
   },
 });
 
-export const { TOGGLE_SIDEBAR, TOGGLE_DARK_MODE, SET_DARK_MODE } = styleSlice.actions;
+export const { TOGGLE_SIDEBAR, SET_SIDEBAR, TOGGLE_DARK_MODE, SET_DARK_MODE } =
+  styleSlice.actions;
 
 export default styleSlice.reducer;

@@ -1,51 +1,49 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
 
-type StarrySkyProps = {
-  className?: string;
-  children: React.ReactNode;
-};
+import { useEffect, useRef, type ReactNode } from 'react';
 
-const StarrySky = ({ className, children }: StarrySkyProps) => {
-  const skyRef = useRef<HTMLDivElement | null>(null);
+interface IStarrySkyProps {
+  readonly className?: string;
+  readonly children: ReactNode;
+}
+
+function StarrySky({ className, children }: IStarrySkyProps) {
+  const starsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const sky = skyRef.current;
-
-    if (!sky) return;
-
-    const numberOfStars = 150;
-
-    for (let i = 0; i < numberOfStars; i++) {
-      const star = document.createElement('div');
-      star.classList.add('star');
-
-      const top = Math.random() * 100;
-      const left = Math.random() * 100;
-      const size = Math.random() * 3 + 1;
-      const duration = Math.random() * 3 + 2;
-
-      star.style.top = `${top}%`;
-      star.style.left = `${left}%`;
-      star.style.width = `${size}px`;
-      star.style.height = `${size}px`;
-      star.style.animationDuration = `${duration}s`;
-
-      sky.appendChild(star);
+    const starsLayer = starsRef.current;
+    if (!starsLayer) {
+      return;
     }
 
+    const numberOfStars = 150;
+    const fragment = document.createDocumentFragment();
+
+    for (let i = 0; i < numberOfStars; i += 1) {
+      const star = document.createElement('div');
+      star.classList.add('star');
+      star.style.top = `${Math.random() * 100}%`;
+      star.style.left = `${Math.random() * 100}%`;
+      const size = Math.random() * 3 + 1;
+      star.style.width = `${size}px`;
+      star.style.height = `${size}px`;
+      star.style.animationDuration = `${Math.random() * 3 + 2}s`;
+      fragment.appendChild(star);
+    }
+
+    starsLayer.appendChild(fragment);
+
     return () => {
-      if (sky) {
-        sky.innerHTML = '';
-      }
+      starsLayer.replaceChildren();
     };
   }, []);
 
   return (
-    <div className={`sky ${className ? className : ''}`} ref={skyRef}>
+    <div className={`sky relative ${className ?? ''}`}>
+      <div ref={starsRef} className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden />
       {children}
     </div>
   );
-};
+}
 
 export default StarrySky;

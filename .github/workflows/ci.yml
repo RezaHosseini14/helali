@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build -w @helali/shared
+
+      - run: npm run lint --workspaces --if-present
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: root
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: helali_database
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U root -d helali_database"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://root:root@localhost:5432/helali_database?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: test-jwt-secret-min-32-characters-long
+      JWT_REFRESH_SECRET: test-refresh-secret-min-32-chars-long
+      NODE_ENV: test
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_PATH: storage
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minio99
+      MINIO_SECRET_KEY: minio123
+      MINIO_USE_SSL: 'false'
+      API_ENCRYPTION_ENABLED: 'false'
+      NEXT_PUBLIC_API_ENCRYPTION_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prepare env for scripts
+        run: cp .env.example .env
+
+      - run: npm run build -w @helali/shared
+
+      - run: npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+      - run: npx prisma migrate deploy --schema=apps/backend/prisma/schema.prisma
+
+      - run: npm run db:seed -w @helali/backend
+
+      - run: npm run test -w @helali/backend
+
+      - run: npm run test:e2e -w @helali/backend
+
+      - run: npm run test -w @helali/frontend
+
+      - run: npm run test -w @helali/shared --if-present
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build -w @helali/shared
+
+      - run: npx prisma generate --schema=apps/backend/prisma/schema.prisma
+
+      - run: npm run build -w @helali/backend
+
+      - run: npm run build -w @helali/frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+          API_URL: http://localhost:4000/api/v1
+          APP_TITLE: Helali

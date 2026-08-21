@@ -9,9 +9,9 @@ function DashboardItem(props: DashboardItemPropsType) {
   return (
     <div
       style={{ backgroundColor: `${cardColor}28` }}
-      className="section-style relative flex max-h-24 min-h-24 flex-col justify-center overflow-hidden row-span-2"
+      className="section-style relative flex min-h-20 max-h-20 flex-col justify-center overflow-hidden sm:min-h-24 sm:max-h-24"
     >
-      <div className="absolute top-0 right-0 rounded-bl-2xl bg-dashboardbackground pb-2 pl-2">
+      <div className="absolute top-0 right-0 rounded-bl-2xl bg-dashboardbackground pb-1.5 pl-1.5 sm:pb-2 sm:pl-2">
         <div className="dashboard-box relative">
           <Icon
             icon={props.icon}
@@ -19,21 +19,21 @@ function DashboardItem(props: DashboardItemPropsType) {
               color: cardColor,
               backgroundColor: `${cardColor}22`,
             }}
-            className="section-icon-style text-3xl"
+            className="section-icon-style size-11 text-2xl sm:size-14 sm:text-3xl"
           />
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-1 pr-16 pl-1">
+      <div className="flex min-w-0 flex-col gap-0.5 pr-14 pl-1 sm:gap-1 sm:pr-16">
         <span
           style={{ color: cardColor }}
-          className="truncate text-sm font-black! tracking-tight sm:text-lg"
+          className="truncate text-xs font-black! tracking-tight sm:text-sm md:text-lg"
         >
           {props.title}
         </span>
         <p
           style={{ color: cardColor }}
-          className="truncate text-3xl font-black! leading-none tabular-nums tracking-tight sm:text-4xl"
+          className="truncate text-2xl font-black! leading-none tabular-nums tracking-tight sm:text-3xl md:text-4xl"
           title={formattedCount}
         >
           {formattedCount}

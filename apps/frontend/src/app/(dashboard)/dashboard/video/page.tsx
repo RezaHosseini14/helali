@@ -7,6 +7,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 import {
   DataTable,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   FileSizeBadge,
@@ -162,8 +163,8 @@ function VideosListsPage() {
         columnHelper.display({
           ...dataTableActionsColumnDefaults,
           cell: ({ row }) => (
-            <div className="inline-flex items-center justify-center gap-1">
-              <CanAccess I="update" a="Video">
+            <DataTableActions>
+              <CanAccess I="update" a="Video" preserveSlot>
                 <IconButton
                   className="update-btn"
                   icon="ki-solid ki-pencil"
@@ -174,7 +175,7 @@ function VideosListsPage() {
                   tooltipText="بروزرسانی"
                 />
               </CanAccess>
-              <CanAccess I="update" a="Video">
+              <CanAccess I="update" a="Video" preserveSlot>
                 <IconButton
                   className="update-btn"
                   icon="ki-solid ki-arrows-circle"
@@ -192,7 +193,7 @@ function VideosListsPage() {
                   tooltipText="تولید مجدد HLS"
                 />
               </CanAccess>
-              <CanAccess I="delete" a="Video">
+              <CanAccess I="delete" a="Video" preserveSlot>
                 <IconButton
                   className="trash-btn"
                   icon="ki-solid ki-trash"
@@ -200,7 +201,7 @@ function VideosListsPage() {
                   tooltipText="حذف فایل ویدیویی"
                 />
               </CanAccess>
-            </div>
+            </DataTableActions>
           ),
         }),
       ]),

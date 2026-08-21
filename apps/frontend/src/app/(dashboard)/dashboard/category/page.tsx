@@ -7,6 +7,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 import {
   DataTable,
+  DataTableActionSlot,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   type DataTableFeatures,
@@ -119,20 +121,24 @@ function CategoriesListsPage() {
         columnHelper.display({
           ...dataTableActionsColumnDefaults,
           cell: ({ row }) => (
-            <div className="inline-flex items-center justify-center gap-1">
-              <IconButton
-                className="update-btn"
-                icon="ki-solid ki-pencil"
-                onClick={() => handleOpenUpdateCategoryModal(row.original.id)}
-                tooltipText="بروزرسانی"
-              />
-              <IconButton
-                className="trash-btn"
-                icon="ki-solid ki-trash"
-                onClick={() => handleOpenConfirmModal(row.original.id)}
-                tooltipText="حذف دسته‌بندی"
-              />
-            </div>
+            <DataTableActions>
+              <DataTableActionSlot>
+                <IconButton
+                  className="update-btn"
+                  icon="ki-solid ki-pencil"
+                  onClick={() => handleOpenUpdateCategoryModal(row.original.id)}
+                  tooltipText="بروزرسانی"
+                />
+              </DataTableActionSlot>
+              <DataTableActionSlot>
+                <IconButton
+                  className="trash-btn"
+                  icon="ki-solid ki-trash"
+                  onClick={() => handleOpenConfirmModal(row.original.id)}
+                  tooltipText="حذف دسته‌بندی"
+                />
+              </DataTableActionSlot>
+            </DataTableActions>
           ),
         }),
       ]),

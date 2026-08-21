@@ -49,21 +49,34 @@ function Header() {
     : '';
 
   return (
-    <div className="flex w-full items-center justify-between">
-      <div className="flex items-center gap-4 text-foreground">
-        <button type="button" className="cursor-pointer" onClick={handleToggleSidebar} aria-label="منو">
+    <header className="flex w-full min-w-0 items-center justify-between gap-2 sm:gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-foreground sm:gap-4">
+        <button
+          type="button"
+          className="grid size-10 shrink-0 cursor-pointer place-content-center rounded-xl hover:bg-muted"
+          onClick={handleToggleSidebar}
+          aria-label="منو"
+        >
           <i className="ki-solid ki-burger-menu-5 text-2xl" />
         </button>
-        <h1 className="font-semibold">پایگاه حفظ و نشر آثار عبدالرضاهلالی</h1>
+        <h1 className="min-w-0 truncate text-sm font-semibold sm:text-base">
+          <span className="sm:hidden">پنل مدیریت</span>
+          <span className="hidden sm:inline">پایگاه حفظ و نشر آثار عبدالرضاهلالی</span>
+        </h1>
       </div>
-      <div className="flex items-center gap-4">
+
+      <div className="flex shrink-0 items-center gap-2 sm:gap-4">
         <Tooltip>
           <TooltipTrigger
             render={
-              <button type="button" className="dashboard-header-item" onClick={handleToggleDarkMode} />
+              <button
+                type="button"
+                className="dashboard-header-item size-9 text-lg sm:size-10 sm:text-xl"
+                onClick={handleToggleDarkMode}
+              />
             }
           >
-            <Icon icon={darkMode ? 'solar:sun-bold-duotone' : 'solar:moon-bold-duotone'} fontSize={25} />
+            <Icon icon={darkMode ? 'solar:sun-bold-duotone' : 'solar:moon-bold-duotone'} fontSize={22} />
           </TooltipTrigger>
           <TooltipContent>{darkMode ? 'حالت روشن' : 'حالت تاریک'}</TooltipContent>
         </Tooltip>
@@ -73,7 +86,7 @@ function Header() {
             render={
               <button
                 type="button"
-                className="dashboard-header-item"
+                className="dashboard-header-item size-9 text-lg sm:size-10 sm:text-xl"
                 onClick={() => {
                   void handleLogout();
                 }}
@@ -81,25 +94,32 @@ function Header() {
               />
             }
           >
-            <Icon icon="solar:logout-2-bold-duotone" fontSize={25} />
+            <Icon icon="solar:logout-2-bold-duotone" fontSize={22} />
           </TooltipTrigger>
           <TooltipContent>خروج</TooltipContent>
         </Tooltip>
 
         <div className="group relative">
           <Tooltip>
-            <TooltipTrigger render={<button type="button" className="dashboard-header-item" />}>
-              <Icon icon="solar:user-bold-duotone" fontSize={25} />
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  className="dashboard-header-item size-9 text-lg sm:size-10 sm:text-xl"
+                />
+              }
+            >
+              <Icon icon="solar:user-bold-duotone" fontSize={22} />
             </TooltipTrigger>
             <TooltipContent>حساب کاربری</TooltipContent>
           </Tooltip>
 
-          <div className="invisible absolute left-0 top-12 z-50 h-fit w-56 translate-y-4 rounded-xl border border-border bg-card p-4 text-card-foreground opacity-0 shadow-lg backdrop-blur-xl transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+          <div className="invisible absolute end-0 top-12 z-50 h-fit w-56 translate-y-4 rounded-xl border border-border bg-card p-4 text-card-foreground opacity-0 shadow-lg backdrop-blur-xl transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
             <ul className="flex h-full w-full flex-col items-center gap-4">
               <li className="w-full rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="flex w-full flex-col items-start text-sm">
-                    <div className="flex w-full items-center justify-between text-foreground">
+                    <div className="flex w-full items-center justify-between truncate text-foreground">
                       {displayName}
                     </div>
                   </div>
@@ -117,14 +137,14 @@ function Header() {
                   }}
                 >
                   <span>خروج</span>
-                  <Icon icon="solar:logout-2-bold-duotone" fontSize={25} />
+                  <Icon icon="solar:logout-2-bold-duotone" fontSize={22} />
                 </Button>
               </li>
             </ul>
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 }
 

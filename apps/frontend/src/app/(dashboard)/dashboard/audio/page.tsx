@@ -7,6 +7,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 import {
   DataTable,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   FileSizeBadge,
@@ -131,8 +132,8 @@ function AudiosListsPage() {
         columnHelper.display({
           ...dataTableActionsColumnDefaults,
           cell: ({ row }) => (
-            <div className="inline-flex items-center justify-center gap-1">
-              <CanAccess I="update" a="Audio">
+            <DataTableActions>
+              <CanAccess I="update" a="Audio" preserveSlot>
                 <IconButton
                   className="update-btn"
                   icon="ki-solid ki-pencil"
@@ -143,7 +144,7 @@ function AudiosListsPage() {
                   tooltipText="بروزرسانی"
                 />
               </CanAccess>
-              <CanAccess I="delete" a="Audio">
+              <CanAccess I="delete" a="Audio" preserveSlot>
                 <IconButton
                   className="trash-btn"
                   icon="ki-solid ki-trash"
@@ -151,7 +152,7 @@ function AudiosListsPage() {
                   tooltipText="حذف فایل صوتی"
                 />
               </CanAccess>
-            </div>
+            </DataTableActions>
           ),
         }),
       ]),

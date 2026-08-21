@@ -7,6 +7,8 @@ import { ExternalLinkIcon } from 'lucide-react';
 
 import {
   DataTable,
+  DataTableActionSlot,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   type DataTableFeatures,
@@ -150,32 +152,36 @@ function TweetsListsPage() {
               publishedMutation.isPending && publishedMutation.variables?.id === id;
 
             return (
-              <div className="inline-flex items-center justify-center gap-1">
-                <IconButton
-                  className={isPublished ? 'update-btn' : 'create-btn'}
-                  icon={
-                    isRowUpdating
-                      ? 'ki-outline ki-loading animate-spin'
-                      : isPublished
-                        ? 'ki-solid ki-eye-slash'
-                        : 'ki-solid ki-eye'
-                  }
-                  onClick={() => {
-                    publishedMutation.mutate({ id, isPublished: !isPublished });
-                  }}
-                  tooltipText={isPublished ? 'مخفی کردن از سایت' : 'نمایش در سایت'}
-                  disabled={publishedMutation.isPending}
-                />
-                <a
-                  href={link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="grid size-7 shrink-0 place-content-center rounded-md bg-muted text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
-                  title="مشاهده در X"
-                >
-                  <ExternalLinkIcon className="size-3.5" />
-                </a>
-              </div>
+              <DataTableActions>
+                <DataTableActionSlot>
+                  <IconButton
+                    className={isPublished ? 'update-btn' : 'create-btn'}
+                    icon={
+                      isRowUpdating
+                        ? 'ki-outline ki-loading animate-spin'
+                        : isPublished
+                          ? 'ki-solid ki-eye-slash'
+                          : 'ki-solid ki-eye'
+                    }
+                    onClick={() => {
+                      publishedMutation.mutate({ id, isPublished: !isPublished });
+                    }}
+                    tooltipText={isPublished ? 'مخفی کردن از سایت' : 'نمایش در سایت'}
+                    disabled={publishedMutation.isPending}
+                  />
+                </DataTableActionSlot>
+                <DataTableActionSlot>
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="grid size-7 shrink-0 place-content-center rounded-md bg-muted text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                    title="مشاهده در X"
+                  >
+                    <ExternalLinkIcon className="size-3.5" />
+                  </a>
+                </DataTableActionSlot>
+              </DataTableActions>
             );
           },
         }),

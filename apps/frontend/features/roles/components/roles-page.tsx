@@ -10,6 +10,8 @@ import { isSuperRole } from '@helali/shared';
 
 import {
   DataTable,
+  DataTableActionSlot,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   type DataTableFeatures,
@@ -92,25 +94,29 @@ export function RolesPage() {
         columnHelper.display({
           ...dataTableActionsColumnDefaults,
           cell: ({ row }) => (
-            <div className="inline-flex items-center justify-center gap-1">
-              <IconButton
-                className="update-btn"
-                icon="ki-solid ki-pencil"
-                onClick={() =>
-                  setFormState({ open: true, mode: 'edit', role: row.original })
-                }
-                tooltipText="ویرایش"
-              />
-              {!row.original.isSystem ? (
+            <DataTableActions>
+              <DataTableActionSlot>
                 <IconButton
-                  className="trash-btn"
-                  icon="ki-solid ki-trash"
-                  onClick={() => setDeleteId(row.original.id)}
-                  tooltipText="حذف نقش"
-                  disabled={row.original.userCount > 0}
+                  className="update-btn"
+                  icon="ki-solid ki-pencil"
+                  onClick={() =>
+                    setFormState({ open: true, mode: 'edit', role: row.original })
+                  }
+                  tooltipText="ویرایش"
                 />
-              ) : null}
-            </div>
+              </DataTableActionSlot>
+              <DataTableActionSlot>
+                {!row.original.isSystem ? (
+                  <IconButton
+                    className="trash-btn"
+                    icon="ki-solid ki-trash"
+                    onClick={() => setDeleteId(row.original.id)}
+                    tooltipText="حذف نقش"
+                    disabled={row.original.userCount > 0}
+                  />
+                ) : null}
+              </DataTableActionSlot>
+            </DataTableActions>
           ),
         }),
       ]),

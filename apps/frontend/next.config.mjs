@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const monorepoRoot = path.join(__dirname, '../..');
 const backendPort = process.env.BACKEND_PORT ?? '4000';
-const backendOrigin = `http://localhost:${backendPort}`;
+const backendOrigin =
+  process.env.BACKEND_INTERNAL_ORIGIN?.trim() ||
+  `http://localhost:${backendPort}`;
 
 /** Hostname only — strip protocol / path / port if a full URL was provided. */
 function resolveImageHostname(value) {

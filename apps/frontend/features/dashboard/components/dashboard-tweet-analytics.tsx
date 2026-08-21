@@ -387,15 +387,15 @@ export function DashboardTweetAnalytics() {
 
   return (
     <section className="space-y-4">
-      <div>
+      <div className="min-w-0">
         <p className="text-xs font-semibold tracking-wide text-primary">تحلیل شبکه اجتماعی</p>
-        <h2 className="mt-1 text-xl font-bold text-foreground">آنالیتیکس توییت‌ها</h2>
+        <h2 className="mt-1 text-lg font-bold text-foreground sm:text-xl">آنالیتیکس توییت‌ها</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           لایک، پاسخ، ری‌توییت، نقل‌قول، نوع رسانه و روند انتشار
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:gap-3 md:grid-cols-4 xl:grid-cols-8">
         {[
           { label: 'کل توییت', value: summary?.totalTweets ?? 0, tone: 'text-foreground' },
           { label: 'منتشرشده', value: summary?.publishedCount ?? 0, tone: 'text-primary' },
@@ -415,7 +415,7 @@ export function DashboardTweetAnalytics() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
         <DashboardChartPanel
           title="ترکیب تعامل"
           description="سهم لایک، پاسخ، ری‌توییت و نقل‌قول"

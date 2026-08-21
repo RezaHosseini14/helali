@@ -7,6 +7,8 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 import {
   DataTable,
+  DataTableActionSlot,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   type DataTableFeatures,
@@ -166,31 +168,37 @@ function CommentsListsPage() {
             const { id, status, type } = row.original;
 
             return (
-              <div className="inline-flex items-center justify-center gap-1">
-                <IconButton
-                  className="create-btn"
-                  icon="ki-solid ki-check"
-                  onClick={() =>
-                    void handleChangeStatus(type, id, { newStatus: 'published' })
-                  }
-                  tooltipText="انتشار"
-                  disabled={status === 'published'}
-                />
-                <IconButton
-                  className="update-btn"
-                  icon="ki-solid ki-time"
-                  onClick={() => void handleChangeStatus(type, id, { newStatus: 'pending' })}
-                  tooltipText="بازگشت به انتظار"
-                  disabled={status === 'pending'}
-                />
-                <IconButton
-                  className="trash-btn"
-                  icon="ki-solid ki-cross"
-                  onClick={() => void handleChangeStatus(type, id, { newStatus: 'rejected' })}
-                  tooltipText="رد کردن"
-                  disabled={status === 'rejected'}
-                />
-              </div>
+              <DataTableActions>
+                <DataTableActionSlot>
+                  <IconButton
+                    className="create-btn"
+                    icon="ki-solid ki-check"
+                    onClick={() =>
+                      void handleChangeStatus(type, id, { newStatus: 'published' })
+                    }
+                    tooltipText="انتشار"
+                    disabled={status === 'published'}
+                  />
+                </DataTableActionSlot>
+                <DataTableActionSlot>
+                  <IconButton
+                    className="update-btn"
+                    icon="ki-solid ki-time"
+                    onClick={() => void handleChangeStatus(type, id, { newStatus: 'pending' })}
+                    tooltipText="بازگشت به انتظار"
+                    disabled={status === 'pending'}
+                  />
+                </DataTableActionSlot>
+                <DataTableActionSlot>
+                  <IconButton
+                    className="trash-btn"
+                    icon="ki-solid ki-cross"
+                    onClick={() => void handleChangeStatus(type, id, { newStatus: 'rejected' })}
+                    tooltipText="رد کردن"
+                    disabled={status === 'rejected'}
+                  />
+                </DataTableActionSlot>
+              </DataTableActions>
             );
           },
         }),

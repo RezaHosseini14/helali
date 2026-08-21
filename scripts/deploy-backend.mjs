@@ -176,8 +176,12 @@ function createArchive() {
 
 async function main() {
   const rootEnv = loadRootEnv();
-  const jwtSecret = rootEnv.JWT_SECRET || 'change-me-jwt-secret-min-32-chars-long';
-  const jwtRefresh = rootEnv.JWT_REFRESH_SECRET || 'change-me-refresh-secret-min-32-chars';
+  const jwtSecret =
+    process.env.JWT_SECRET || rootEnv.JWT_SECRET || 'change-me-jwt-secret-min-32-chars-long';
+  const jwtRefresh =
+    process.env.JWT_REFRESH_SECRET ||
+    rootEnv.JWT_REFRESH_SECRET ||
+    'change-me-refresh-secret-min-32-chars';
 
   console.log('\n=== Creating deploy archive ===\n');
   const archivePath = createArchive();
@@ -218,7 +222,6 @@ async function main() {
     await exec(conn, `cat > ${REMOTE_DIR}/.env <<'EOF'\n${envFile}\nEOF`);
 
     console.log('\n=== Building & starting helali-backend (ffmpeg in image) ===\n');
-    // Long build: run detached so SSH keepalive does not kill compose mid-build.
     await exec(
       conn,
       `cd ${REMOTE_DIR} && : > /tmp/helali-backend-build.log && nohup docker compose -f docker-compose.backend.yml up -d --build > /tmp/helali-backend-build.log 2>&1 & echo started:$!`,

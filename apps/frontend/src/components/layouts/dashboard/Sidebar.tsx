@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import type { AppAbility } from '@helali/shared';
 
@@ -16,9 +16,11 @@ import {
   type dashboardMenuItemsType,
 } from '@/jsons/dashboardMenuItems';
 import { cn } from '@/lib/utils';
+import { SET_SIDEBAR } from '@/redux/slices/styleSlice';
 import type { RootState } from '@/redux/store';
 
 const EXPANDED_MENU_KEY = 'helali.dashboard.expandedMenu';
+const MOBILE_SIDEBAR_QUERY = '(max-width: 1023px)';
 
 function canAccessMenuItem(ability: AppAbility, item: dashboardMenuItemsType): boolean {
   if (!item.subject || !item.action) {
@@ -103,6 +105,7 @@ function readExpandedMenuIndex(itemCount: number): number {
 
 function Sidebar() {
   const ability = useAppAbility();
+  const dispatch = useDispatch();
   const { sidebarStatus } = useSelector((state: RootState) => state.style);
   const pathname = usePathname();
 
@@ -138,17 +141,30 @@ function Sidebar() {
     localStorage.setItem(EXPANDED_MENU_KEY, index.toString());
   };
 
+  const handleNavigate = () => {
+    if (typeof window !== 'undefined' && window.matchMedia(MOBILE_SIDEBAR_QUERY).matches) {
+      dispatch(SET_SIDEBAR(false));
+    }
+  };
+
+  const isExpanded = sidebarStatus;
+
   return (
-    <div
+    <aside
       className={cn(
-        'fixed start-8 top-8 bottom-8 flex overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-sm transition-[width] duration-300 ease-in-out',
-        sidebarStatus ? 'w-72' : 'w-16',
+        'fixed z-50 flex overflow-hidden border border-border bg-card text-foreground shadow-sm transition-[transform,width,inset] duration-300 ease-in-out',
+        'start-0 top-0 bottom-0 w-[min(18rem,88vw)] rounded-none border-y-0 border-s-0 sm:rounded-e-2xl',
+        'lg:start-8 lg:top-8 lg:bottom-8 lg:rounded-2xl lg:border',
+        isExpanded ? 'lg:w-72' : 'lg:w-16',
+        isExpanded
+          ? 'translate-x-0'
+          : 'pointer-events-none invisible -translate-x-full rtl:translate-x-full lg:pointer-events-auto lg:visible lg:translate-x-0',
       )}
     >
       <div
         className={cn(
           'flex w-16 shrink-0 flex-col items-center gap-6 transition-[padding] duration-300 ease-in-out',
-          sidebarStatus ? 'py-8' : 'py-3',
+          isExpanded ? 'py-8' : 'py-3 max-lg:py-8',
         )}
       >
         {visibleMenuItems.map((item, index) => {
@@ -184,8 +200,10 @@ function Sidebar() {
 
       <div
         className={cn(
-          'min-w-0 flex-1 overflow-hidden border-s border-border transition-[opacity,padding] duration-300 ease-in-out',
-          sidebarStatus ? 'px-2 py-4 opacity-100' : 'pointer-events-none p-0 opacity-0',
+          'min-w-0 flex-1 overflow-y-auto border-s border-border transition-[opacity,padding] duration-300 ease-in-out',
+          isExpanded
+            ? 'px-2 py-4 opacity-100'
+            : 'pointer-events-none p-0 opacity-0 max-lg:pointer-events-none',
         )}
       >
         {visibleMenuItems[expandedMenuIndex]?.children ? (
@@ -207,7 +225,8 @@ function Sidebar() {
                   <Link
                     href={child.url}
                     aria-current={isChildActive ? 'page' : undefined}
-                    tabIndex={sidebarStatus ? undefined : -1}
+                    tabIndex={isExpanded ? undefined : -1}
+                    onClick={handleNavigate}
                     className={cn(
                       'flex min-w-0 items-center gap-2 rounded-xl px-2 py-2 transition-colors',
                       isChildActive
@@ -232,7 +251,7 @@ function Sidebar() {
           <p className="px-2 text-sm text-muted-foreground">زیرمنویی موجود نیست</p>
         )}
       </div>
-    </div>
+    </aside>
   );
 }
 

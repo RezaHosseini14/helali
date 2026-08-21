@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 
 import {
   DataTable,
+  DataTableActionSlot,
+  DataTableActions,
   dataTableActionsColumnDefaults,
   dataTableIdColumnDefaults,
   type DataTableFeatures,
@@ -141,16 +143,18 @@ function UserPage() {
           ...dataTableActionsColumnDefaults,
           cell: ({ row }) =>
             currentUser?.username === row.original.username ? null : (
-              <div className="inline-flex items-center justify-center gap-1">
-                {canAssignRole ? (
-                  <IconButton
-                    className="update-btn"
-                    icon="ki-solid ki-shield-user"
-                    onClick={() => setAssignRoleUser(row.original)}
-                    tooltipText="تغییر نقش"
-                  />
-                ) : null}
-                <CanAccess I="manage" a="User">
+              <DataTableActions>
+                <DataTableActionSlot>
+                  {canAssignRole ? (
+                    <IconButton
+                      className="update-btn"
+                      icon="ki-solid ki-shield-user"
+                      onClick={() => setAssignRoleUser(row.original)}
+                      tooltipText="تغییر نقش"
+                    />
+                  ) : null}
+                </DataTableActionSlot>
+                <CanAccess I="manage" a="User" preserveSlot>
                   <IconButton
                     className="trash-btn"
                     icon="ki-solid ki-trash"
@@ -158,7 +162,7 @@ function UserPage() {
                     tooltipText="حذف کاربر"
                   />
                 </CanAccess>
-              </div>
+              </DataTableActions>
             ),
         }),
       ]),

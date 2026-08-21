@@ -94,21 +94,21 @@ function FilterPills<T extends string>({
   readonly onChange: (next: T) => void;
 }) {
   return (
-    <div className="inline-flex flex-wrap gap-1 rounded-full border border-border/70 bg-muted/40 p-1">
+    <div className="flex max-w-full flex-wrap gap-1 rounded-2xl border border-border/70 bg-muted/40 p-1 sm:inline-flex sm:rounded-full">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           onClick={() => onChange(option.value)}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all',
+            'inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all sm:flex-none sm:rounded-full sm:px-3',
             value === option.value
               ? 'bg-primary text-primary-foreground shadow-sm'
               : 'text-muted-foreground hover:bg-background/80 hover:text-foreground',
           )}
         >
-          {option.icon ? <Icon icon={option.icon} className="text-sm" /> : null}
-          {option.label}
+          {option.icon ? <Icon icon={option.icon} className="shrink-0 text-sm" /> : null}
+          <span className="truncate">{option.label}</span>
         </button>
       ))}
     </div>
@@ -481,11 +481,11 @@ export function DashboardAnalytics() {
   const chartOpts = useMemo(() => ({ renderer: 'canvas' as const, locale: 'FA' }), []);
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
+    <section className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
+        <div className="min-w-0">
           <p className="text-xs font-semibold tracking-wide text-primary">گزارش عملکرد</p>
-          <h2 className="mt-1 text-xl font-bold text-foreground">آنالیتیکس محتوا</h2>
+          <h2 className="mt-1 text-lg font-bold text-foreground sm:text-xl">آنالیتیکس محتوا</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             روند بازدید، لایک و تعامل محتوا در ۷ روز اخیر
           </p>
@@ -501,7 +501,7 @@ export function DashboardAnalytics() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <DashboardChartPanel
           title="روند ۷ روز اخیر"
           description="مقایسه بازدید و لایک روزانه"
@@ -573,14 +573,14 @@ export function DashboardAnalytics() {
         </DashboardChartPanel>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <DashboardChartPanel
           title="تحلیل تعامل"
           description="رتبه‌بندی محتوا بر اساس نسبت لایک به بازدید"
           icon="solar:heart-pulse-bold-duotone"
           accentClassName="bg-[var(--chart-5)]"
           className="xl:col-span-2"
-          chartHeightClassName="h-[20rem] sm:h-[22rem]"
+          chartHeightClassName="h-[18rem] sm:h-[20rem] md:h-[22rem]"
           isLoading={topQuery.isPending}
         >
           {engagementAnalysis.length === 0 ? (
