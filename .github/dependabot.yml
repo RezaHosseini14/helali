@@ -1,19 +1,14 @@
+# Exactly ONE update entry. Do not add per-app docker ecosystems —
+# each directory becomes a separate Dependabot job and floods Actions.
+# Base image stays pinned (node:22-alpine); Trivy gates vulns on build.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
-
-  - package-ecosystem: docker
-    directory: /apps/backend
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-
-  - package-ecosystem: docker
-    directory: /apps/frontend
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns:
+          - "*"
