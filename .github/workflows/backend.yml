@@ -9,6 +9,7 @@ on:
       - 'docker-compose.backend.yml'
       - 'apps/backend/Dockerfile'
       - '.github/workflows/backend.yml'
+      - 'package-lock.json'
   workflow_dispatch:
 
 concurrency:
@@ -18,15 +19,27 @@ concurrency:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 env:
+  REGISTRY: ghcr.io
   IMAGE_NAME: helali-backend
   REMOTE_DIR: /opt/helali-app
+  BACKEND_HOST_PORT: '3030'
+  SSH_FLAGS: >-
+    -o ConnectTimeout=20
+    -o ServerAliveInterval=15
+    -o ServerAliveCountMax=20
+    -o TCPKeepAlive=yes
+    -o StrictHostKeyChecking=accept-new
 
 jobs:
-  build-and-deploy:
+  build:
+    name: Build & Scan
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    outputs:
+      image_ref: ${{ steps.meta.outputs.ref }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,98 +47,201 @@ jobs:
         id: meta
         run: |
           OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')
-          SHA='${{ github.sha }}'
-          IMAGE="ghcr.io/${OWNER}/${{ env.IMAGE_NAME }}"
-          echo "owner=${OWNER}" >> "$GITHUB_OUTPUT"
-          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "tag=${SHA}" >> "$GITHUB_OUTPUT"
-          echo "ref=${IMAGE}:${SHA}" >> "$GITHUB_OUTPUT"
+          IMAGE="${{ env.REGISTRY }}/${OWNER}/${{ env.IMAGE_NAME }}"
+          TAG="${{ github.sha }}"
+          {
+            echo "owner=${OWNER}"
+            echo "image=${IMAGE}"
+            echo "tag=${TAG}"
+            echo "ref=${IMAGE}:${TAG}"
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v3
         with:
-          registry: ghcr.io
+          driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
+          buildkitd-config-inline: |
+            [registry."docker.io"]
+              mirrors = ["mirror.gcr.io"]
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Build (load for scan)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/backend/Dockerfile
+          load: true
+          tags: ${{ steps.meta.outputs.ref }}
+          cache-from: type=gha,scope=helali-backend
+          cache-to: type=gha,mode=max,scope=helali-backend
 
-      - name: Build and push
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.meta.outputs.ref }}
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+      - name: Push image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/backend/Dockerfile
           push: true
+          provenance: mode=max
+          sbom: true
           tags: |
             ${{ steps.meta.outputs.ref }}
             ${{ steps.meta.outputs.image }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=helali-backend
+          cache-to: type=gha,mode=max,scope=helali-backend
 
-      - name: Prepare SSH
+  deploy:
+    name: Deploy backend
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER || 'root' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require secrets
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
         run: |
-          test -n "$SSH_PRIVATE_KEY" || { echo "Missing secret SSH_PRIVATE_KEY"; exit 1; }
-          test -n "$SSH_HOST" || { echo "Missing secret SSH_HOST"; exit 1; }
-          test -n "$SSH_USER" || { echo "Missing secret SSH_USER"; exit 1; }
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          test -n "$SSH_PRIVATE_KEY" || { echo "::error::Missing SSH_PRIVATE_KEY"; exit 1; }
+          test -n "$SSH_HOST" || { echo "::error::Missing SSH_HOST"; exit 1; }
 
-      - name: Upload compose file
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-        run: |
-          ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" "mkdir -p ${{ env.REMOTE_DIR }}"
-          scp -i ~/.ssh/id_ed25519 docker-compose.backend.yml \
-            "$SSH_USER@$SSH_HOST:${{ env.REMOTE_DIR }}/docker-compose.backend.yml"
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Pull and restart on server
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          IMAGE_REF: ${{ steps.meta.outputs.ref }}
-          GHCR_USER: ${{ steps.meta.outputs.owner }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
+      - name: Sync compose
         run: |
-          test -n "$GHCR_TOKEN" || { echo "Missing secret GHCR_PULL_TOKEN (PAT with read:packages)"; exit 1; }
-          ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
-            env IMAGE_REF="$IMAGE_REF" GHCR_USER="$GHCR_USER" GHCR_TOKEN="$GHCR_TOKEN" REMOTE_DIR="${{ env.REMOTE_DIR }}" \
+          set -euo pipefail
+          # shellcheck disable=SC2086
+          ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "mkdir -p $REMOTE_DIR"
+          # shellcheck disable=SC2086
+          scp $SSH_FLAGS docker-compose.backend.yml \
+            "$SSH_USER@$SSH_HOST:$REMOTE_DIR/docker-compose.backend.yml"
+
+      - name: Rollout backend
+        env:
+          BACKEND_IMAGE: ${{ needs.build.outputs.image_ref }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2086
+          ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" \
+            BACKEND_IMAGE="$BACKEND_IMAGE" GHCR_USER="$GHCR_USER" GHCR_TOKEN="$GHCR_TOKEN" \
+            REMOTE_DIR="$REMOTE_DIR" BACKEND_HOST_PORT="$BACKEND_HOST_PORT" \
             bash -s <<'EOF'
           set -euo pipefail
           cd "$REMOTE_DIR"
+          unset COMPOSE_FILE COMPOSE_PATH || true
+
           if [ ! -f .env ]; then
-            echo "Missing $REMOTE_DIR/.env on server. Copy deploy/backend.env.example first."
+            echo "::error::Missing $REMOTE_DIR/.env — copy deploy/backend.env.example first"
             exit 1
           fi
-          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-          if grep -q '^BACKEND_IMAGE=' .env; then
-            sed -i "s|^BACKEND_IMAGE=.*|BACKEND_IMAGE=${IMAGE_REF}|" .env
-          else
-            echo "BACKEND_IMAGE=${IMAGE_REF}" >> .env
+
+          if [ -n "${GHCR_TOKEN}" ]; then
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
           fi
-          docker compose -f docker-compose.backend.yml pull
-          docker compose -f docker-compose.backend.yml up -d --remove-orphans
+
+          if grep -q '^BACKEND_IMAGE=.\+' .env; then
+            prev=$(grep '^BACKEND_IMAGE=' .env | head -1 | cut -d= -f2-)
+            if grep -q '^BACKEND_IMAGE_PREV=' .env; then
+              sed -i "s|^BACKEND_IMAGE_PREV=.*|BACKEND_IMAGE_PREV=${prev}|" .env
+            else
+              echo "BACKEND_IMAGE_PREV=${prev}" >> .env
+            fi
+            sed -i "s|^BACKEND_IMAGE=.*|BACKEND_IMAGE=${BACKEND_IMAGE}|" .env
+          else
+            echo "BACKEND_IMAGE=${BACKEND_IMAGE}" >> .env
+          fi
+
+          if grep -q '^BACKEND_HOST_PORT=' .env; then
+            sed -i "s|^BACKEND_HOST_PORT=.*|BACKEND_HOST_PORT=${BACKEND_HOST_PORT}|" .env
+          else
+            echo "BACKEND_HOST_PORT=${BACKEND_HOST_PORT}" >> .env
+          fi
+
+          if ! grep -q '^JWT_SECRET=.\+' .env; then
+            sed -i '/^JWT_SECRET=/d' .env || true
+            echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
+          fi
+          if ! grep -q '^JWT_REFRESH_SECRET=.\+' .env; then
+            sed -i '/^JWT_REFRESH_SECRET=/d' .env || true
+            echo "JWT_REFRESH_SECRET=$(openssl rand -base64 48)" >> .env
+          fi
+
+          docker compose -f docker-compose.backend.yml pull backend
+
+          up_one() {
+            local timeout="$1"
+            if docker compose -f docker-compose.backend.yml up -d --force-recreate --wait --wait-timeout "$timeout" backend; then
+              return 0
+            fi
+            # Name-conflict retry only — never rm before first recreate attempt
+            docker rm -f helali-backend 2>/dev/null || true
+            docker compose -f docker-compose.backend.yml up -d --force-recreate --wait --wait-timeout "$timeout" backend
+          }
+          up_one 180
+
+          docker ps --format '{{.Names}}' | grep -qx 'helali-backend' || {
+            echo '::error::helali-backend not running'
+            docker ps -a --filter name=helali
+            exit 1
+          }
+          docker port helali-backend 4000/tcp | grep -qE "(:|::)${BACKEND_HOST_PORT}$" || {
+            echo "::error::backend not on host port ${BACKEND_HOST_PORT}"
+            docker port helali-backend || true
+            exit 1
+          }
+
+          EXPECTED=$(docker image inspect --format '{{.Id}}' "$BACKEND_IMAGE")
+          RUNNING=$(docker inspect --format '{{.Image}}' helali-backend)
+          [ "$EXPECTED" = "$RUNNING" ] || {
+            echo "::error::image mismatch running=$RUNNING expected=$EXPECTED"
+            exit 1
+          }
+
           docker image prune -f || true
           EOF
 
-      - name: Health check
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
+      - name: Probe
         run: |
+          set -uo pipefail
           for i in $(seq 1 30); do
-            if curl -sf "http://${SSH_HOST}:4000/api/v1/health" >/dev/null; then
-              curl -sf "http://${SSH_HOST}:4000/api/v1/health"
-              echo
+            if curl -fsS --connect-timeout 5 "http://${SSH_HOST}:${BACKEND_HOST_PORT}/api/v1/health" >/dev/null; then
+              echo "backend healthy"
+              curl -fsS "http://${SSH_HOST}:${BACKEND_HOST_PORT}/api/v1/health" || true
               exit 0
             fi
-            sleep 5
+            sleep 3
           done
-          echo "Backend health check failed"
+          echo "::error::backend health probe failed"
+          # shellcheck disable=SC2086
+          ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "docker logs helali-backend --tail 80" || true
           exit 1
+
+      - name: Summary
+        if: always()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## Backend deploy
+          - Image: \`${{ needs.build.outputs.image_ref }}\`
+          - Host port: \`${{ env.BACKEND_HOST_PORT }}\` → container \`4000\`
+          - Host: \`${{ env.SSH_HOST }}\`
+          - Dir: \`${{ env.REMOTE_DIR }}\`
+          EOF

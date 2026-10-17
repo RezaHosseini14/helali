@@ -1,5 +1,5 @@
-# Helali public site — production pulls a pre-built image from GHCR (no on-server build).
-# IMAGE is set by GitHub Actions, e.g. ghcr.io/<owner>/helali-frontend:<git-sha>
+# Helali public site — GHCR image only (no on-server build).
+# Host publish: FRONTEND_HOST_PORT (default 3031) → container 3000
 
 services:
   frontend:
@@ -16,13 +16,18 @@ services:
       MINIO_PORT: ${MINIO_PUBLIC_PORT:-9010}
       MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
     ports:
-      - '3010:3000'
+      - '${FRONTEND_HOST_PORT:-3031}:3000'
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000']
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
     networks:
       - helali-network
 

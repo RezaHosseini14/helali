@@ -1,5 +1,5 @@
-# Helali API — production pulls a pre-built image from GHCR (no on-server build).
-# IMAGE is set by GitHub Actions, e.g. ghcr.io/<owner>/helali-backend:<git-sha>
+# Helali API — GHCR image only (no on-server build).
+# Host publish: BACKEND_HOST_PORT (default 3030) → container 4000
 
 services:
   backend:
@@ -29,13 +29,19 @@ services:
       STORAGE_DRIVER: minio
       API_ENCRYPTION_ENABLED: 'false'
     ports:
-      - '4000:4000'
+      # Host publish (do not reuse app BACKEND_PORT=4000 from .env)
+      - '${BACKEND_HOST_PORT:-3030}:4000'
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/api/v1/health']
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:4000/api/v1/health']
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
     networks:
       - helali-network
 
