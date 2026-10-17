@@ -73,7 +73,7 @@ jobs:
           echo "site_url=${SITE_URL}" >> "$GITHUB_OUTPUT"
           echo "minio_endpoint=${HOST}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         with:
           driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
           buildkitd-config-inline: |
