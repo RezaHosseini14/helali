@@ -44,7 +44,7 @@ jobs:
       site_url: ${{ steps.public.outputs.site_url }}
       minio_endpoint: ${{ steps.public.outputs.minio_endpoint }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Image coordinates
         id: meta
@@ -144,7 +144,7 @@ jobs:
       SSH_HOST: ${{ secrets.SSH_HOST }}
       SSH_USER: ${{ secrets.SSH_USER || 'root' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Require secrets
         env:
