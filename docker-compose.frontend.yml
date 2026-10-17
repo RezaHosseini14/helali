@@ -8,7 +8,8 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://5.159.49.36:4000/api/v1}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://helali.rmhosseini.ir/api/v1}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://helali.rmhosseini.ir}
       API_URL: ${API_URL:-http://helali-backend:4000/api/v1}
       BACKEND_INTERNAL_ORIGIN: ${BACKEND_INTERNAL_ORIGIN:-http://helali-backend:4000}
       MINIO_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-5.159.49.36}

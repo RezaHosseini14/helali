@@ -17,6 +17,9 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // Re-resolve each request so HTTPS pages never keep a baked-in http:// API base.
+  config.baseURL = getApiBaseUrl();
+
   const token = getAccessToken();
 
   if (token) {

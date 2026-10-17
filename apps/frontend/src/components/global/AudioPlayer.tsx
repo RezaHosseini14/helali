@@ -23,6 +23,7 @@ import {
 } from '@/redux/slices/audioSlice';
 import type { AppDispatch, RootState } from '@/redux/store';
 import { BRAND_COLORS } from '@/lib/brand';
+import { toBrowserMediaUrl } from '@/lib/browser-media-url';
 import { playMediaSafely } from '@/lib/play-media';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -95,7 +96,7 @@ function AudioPlayer() {
   const canGoPrev = currentIndex >= 0;
   const canGoNext = currentIndex >= 0 && (currentIndex < queue.length - 1 || repeatMode === 'all');
   const effectiveVolume = isMuted ? 0 : volume;
-  const trackSrc = currentAudio?.path ?? '';
+  const trackSrc = toBrowserMediaUrl(currentAudio?.path);
 
   useEffect(() => {
     isPlayingRef.current = isPlaying;

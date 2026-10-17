@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import Image from 'next/image';
 
+import { toBrowserMediaUrl } from '@/lib/browser-media-url';
+
 function ImageWithLoader({
   src,
   alt,
@@ -18,8 +20,10 @@ function ImageWithLoader({
 }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const safeSrc = toBrowserMediaUrl(src);
+  const useProxy = safeSrc.startsWith('/media-proxy?');
 
-  if (!src || hasError) {
+  if (!safeSrc || hasError) {
     return (
       <div
         className={`relative flex h-full w-full items-center justify-center bg-muted text-muted-foreground ${className || ''}`}
@@ -34,10 +38,11 @@ function ImageWithLoader({
     <div className={`relative h-full w-full ${className || ''}`}>
       {!isLoaded ? <div className="absolute inset-0 animate-pulse bg-muted/80" /> : null}
       <Image
-        src={src}
+        src={safeSrc}
         alt={alt}
         fill
         sizes={sizes}
+        unoptimized={useProxy}
         style={{ objectFit: 'cover' }}
         onLoad={() => setIsLoaded(true)}
         onError={() => setHasError(true)}

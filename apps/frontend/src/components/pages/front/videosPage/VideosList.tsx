@@ -2,6 +2,7 @@ import type { videoTypes } from 'types/video.type';
 
 import VideoCard from './VideoCard';
 import CustomPagination from '@/components/global/CustomPagination';
+import { getApiBaseUrl } from '@/services/api-base-url';
 
 interface IVideosListPayload {
   videos: videoTypes[];
@@ -12,7 +13,7 @@ interface IVideosListPayload {
 const API_FETCH_TIMEOUT_MS = 8_000;
 
 async function getVideos(page: number, limit: number): Promise<IVideosListPayload | null> {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1';
+  const apiUrl = getApiBaseUrl();
 
   try {
     const res = await fetch(`${apiUrl}/video?page=${page}&limit=${limit}`, {

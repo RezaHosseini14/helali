@@ -13,6 +13,7 @@ import {
 } from '@videojs/react';
 import { Video, VideoSkin, videoFeatures } from '@videojs/react/video';
 
+import { toBrowserMediaUrl } from '@/lib/browser-media-url';
 import { isHlsPlaybackSource } from '@/lib/video-playback';
 import { cn } from '@/lib/utils';
 
@@ -159,15 +160,17 @@ export function VideoPlayer({
   handleLoadedMetadata,
 }: IVideoPlayerProps) {
   const isPlain = variant === 'plain';
-  const playbackKey = `${mimeType ?? 'auto'}:${src}`;
+  const safeSrc = toBrowserMediaUrl(src);
+  const safePoster = toBrowserMediaUrl(poster);
+  const playbackKey = `${mimeType ?? 'auto'}:${safeSrc}`;
 
   const media = (
     <VideoSource
       key={playbackKey}
-      src={src}
+      src={safeSrc}
       mimeType={mimeType}
       title={title}
-      poster={controls ? undefined : poster}
+      poster={controls ? undefined : safePoster}
       autoPlay={autoPlay}
       muted={muted}
       videoRef={videoRef}
@@ -214,7 +217,7 @@ export function VideoPlayer({
             <VideoSkin
               className="helali-video-skin h-full w-full"
               style={HELALI_VIDEO_SKIN_VARS}
-              poster={poster}
+              poster={safePoster}
             >
               {media}
             </VideoSkin>

@@ -45,10 +45,14 @@ jobs:
         id: public
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL }}
         run: |
           HOST="${SSH_HOST:-5.159.49.36}"
-          echo "api_url=http://${HOST}:4000/api/v1" >> "$GITHUB_OUTPUT"
-          echo "site_url=http://${HOST}:3000" >> "$GITHUB_OUTPUT"
+          # Public HTTPS site (nginx). Never bake http://IP:4000 into the client bundle.
+          SITE_URL="${PUBLIC_SITE_URL:-https://helali.rmhosseini.ir}"
+          SITE_URL="${SITE_URL%/}"
+          echo "api_url=${SITE_URL}/api/v1" >> "$GITHUB_OUTPUT"
+          echo "site_url=${SITE_URL}" >> "$GITHUB_OUTPUT"
           echo "minio_endpoint=${HOST}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
@@ -112,12 +116,13 @@ jobs:
           GHCR_USER: ${{ steps.meta.outputs.owner }}
           GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
           API_URL: ${{ steps.public.outputs.api_url }}
+          SITE_URL: ${{ steps.public.outputs.site_url }}
           MINIO_ENDPOINT: ${{ steps.public.outputs.minio_endpoint }}
         run: |
           test -n "$GHCR_TOKEN" || { echo "Missing secret GHCR_PULL_TOKEN (PAT with read:packages)"; exit 1; }
           ssh -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
             env IMAGE_REF="$IMAGE_REF" GHCR_USER="$GHCR_USER" GHCR_TOKEN="$GHCR_TOKEN" \
-            API_URL="$API_URL" MINIO_ENDPOINT="$MINIO_ENDPOINT" REMOTE_DIR="${{ env.REMOTE_DIR }}" \
+            API_URL="$API_URL" SITE_URL="$SITE_URL" MINIO_ENDPOINT="$MINIO_ENDPOINT" REMOTE_DIR="${{ env.REMOTE_DIR }}" \
             bash -s <<'EOF'
           set -euo pipefail
           cd "$REMOTE_DIR"
@@ -135,6 +140,11 @@ jobs:
             sed -i "s|^NEXT_PUBLIC_API_URL=.*|NEXT_PUBLIC_API_URL=${API_URL}|" .env
           else
             echo "NEXT_PUBLIC_API_URL=${API_URL}" >> .env
+          fi
+          if grep -q '^NEXT_PUBLIC_SITE_URL=' .env; then
+            sed -i "s|^NEXT_PUBLIC_SITE_URL=.*|NEXT_PUBLIC_SITE_URL=${SITE_URL}|" .env
+          else
+            echo "NEXT_PUBLIC_SITE_URL=${SITE_URL}" >> .env
           fi
           if grep -q '^MINIO_PUBLIC_ENDPOINT=' .env; then
             sed -i "s|^MINIO_PUBLIC_ENDPOINT=.*|MINIO_PUBLIC_ENDPOINT=${MINIO_ENDPOINT}|" .env

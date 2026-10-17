@@ -11,6 +11,8 @@ import 'yet-another-react-lightbox/styles.css';
 import 'yet-another-react-lightbox/plugins/thumbnails.css';
 import 'yet-another-react-lightbox/plugins/captions.css';
 
+import { toBrowserMediaUrl } from '@/lib/browser-media-url';
+
 interface IImagePlayerSlide {
   src: string;
   alt?: string;
@@ -48,7 +50,7 @@ export function ImagePlayer({ slides, children, className, onOpen, onClose }: II
         close={handleClose}
         index={index}
         slides={slides.map((slide) => ({
-          src: slide.src,
+          src: toBrowserMediaUrl(slide.src),
           alt: slide.alt,
           title: slide.title,
         }))}

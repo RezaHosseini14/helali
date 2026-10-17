@@ -3,6 +3,7 @@
 import { Icon } from '@iconify/react';
 
 import { Button } from '@/components/ui/button';
+import { toBrowserMediaUrl } from '@/lib/browser-media-url';
 import { cn } from '@/lib/utils';
 
 interface IDownloadButtonProps {
@@ -11,9 +12,11 @@ interface IDownloadButtonProps {
 }
 
 function DownloadButton({ link, className }: IDownloadButtonProps) {
+  const href = toBrowserMediaUrl(link);
+
   return (
     <Button
-      render={<a href={link} download />}
+      render={<a href={href} download />}
       nativeButton={false}
       size="sm"
       className={cn(
