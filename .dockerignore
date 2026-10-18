@@ -26,5 +26,3 @@ founder
 **/*.test.ts
 **/__tests__
 apps/frontend/e2e
-docker-compose*.yml
-!docker-compose.prod.yml

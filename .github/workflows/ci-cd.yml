@@ -18,8 +18,6 @@ permissions:
 env:
   REGISTRY: ghcr.io
   REMOTE_DIR: /opt/helali
-  # Shared SSH hardening flags for every remote command (keeps each step
-  # hermetic instead of relying only on the generated ~/.ssh/config).
   SSH_FLAGS: >-
     -o ConnectTimeout=20
     -o ServerAliveInterval=15
@@ -29,14 +27,12 @@ env:
 
 jobs:
   # ==========================================
-  # STAGE 1: Quality Gate (lint + test only)
-  # Full `npm run build` is skipped here — Docker images already compile the apps.
-  # validate runs IN PARALLEL with docker builds to cut wall-clock time.
+  # STAGE 1: Quality Gate (npm workspaces)
   # ==========================================
   validate:
     name: Quality Gate (Lint & Test)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -58,10 +54,11 @@ jobs:
         run: npm run test
 
   # ==========================================
-  # STAGE 2A: Build & Push Backend Image (parallel with validate)
+  # STAGE 2A: Build & Push Backend Image
   # ==========================================
   build-backend:
     name: Docker Backend (Build & GHCR Push)
+    needs: [validate]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -76,7 +73,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # GitHub-hosted runners share Docker Hub IPs and receive HTTP 429.
           driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
           buildkitd-config-inline: |
             [registry."docker.io"]
@@ -110,19 +106,15 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.ref }}
             ${{ steps.meta.outputs.image }}:latest
-          # GHA cache (fast) + registry cache (survives GHA eviction, shared across forks/runners)
-          cache-from: |
-            type=gha,scope=helali-backend
-            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
-          cache-to: |
-            type=gha,mode=max,scope=helali-backend
-            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
+          cache-from: type=gha,scope=helali-backend
+          cache-to: type=gha,mode=max,scope=helali-backend
 
   # ==========================================
-  # STAGE 2B: Build & Push Frontend Image (parallel with validate)
+  # STAGE 2B: Build & Push Frontend Image
   # ==========================================
   build-frontend:
     name: Docker Frontend (Build & GHCR Push)
+    needs: [validate]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -137,7 +129,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # GitHub-hosted runners share Docker Hub IPs and receive HTTP 429.
           driver-opts: image=mirror.gcr.io/moby/buildkit:buildx-stable-1
           buildkitd-config-inline: |
             [registry."docker.io"]
@@ -179,20 +170,43 @@ jobs:
             MINIO_ENDPOINT=5.159.49.36
             MINIO_PORT=9010
             MINIO_USE_SSL=false
-          cache-from: |
-            type=gha,scope=helali-frontend
-            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
-          cache-to: |
-            type=gha,mode=max,scope=helali-frontend
-            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
+          cache-from: type=gha,scope=helali-frontend
+          cache-to: type=gha,mode=max,scope=helali-frontend
 
   # ==========================================
-  # STAGE 3: Production Deployment (after validate + both images)
+  # STAGE 3A: Deployment Preflight
+  # ==========================================
+  preflight:
+    name: Deployment Preflight
+    needs: [build-backend, build-frontend]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    outputs:
+      deploy_enabled: ${{ steps.check.outputs.deploy_enabled }}
+
+    steps:
+      - name: Detect deployment credentials
+        id: check
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          if [ -n "${SSH_PRIVATE_KEY}" ]; then
+            echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Deployment credentials detected."
+          else
+            echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SSH_PRIVATE_KEY is not configured. Skipping production deployment."
+          fi
+
+  # ==========================================
+  # STAGE 3B: Production Deployment to Server
   # ==========================================
   deploy:
     name: Deploy to Production VPS
-    needs: [validate, build-backend, build-frontend]
-    if: github.event_name != 'pull_request'
+    needs: [build-backend, build-frontend, preflight]
+    if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -209,23 +223,16 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
-          if [ -z "${SSH_PRIVATE_KEY}" ]; then
-            echo "::warning::SSH_PRIVATE_KEY is not configured. Skipping production deployment."
-            echo "skip=true" >> "$GITHUB_ENV"
-            exit 0
-          fi
           test -n "$SSH_HOST" || { echo "::error::Missing SSH_HOST"; exit 1; }
           test -n "$SSH_USER" || { echo "::error::Missing SSH_USER"; exit 1; }
-          echo "skip=false" >> "$GITHUB_ENV"
+          test -n "$SSH_PRIVATE_KEY" || { echo "::error::Missing secret SSH_PRIVATE_KEY"; exit 1; }
 
       - name: Setup SSH agent
-        if: env.skip != 'true'
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add server to known_hosts
-        if: env.skip != 'true'
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -243,12 +250,9 @@ jobs:
           chmod 600 ~/.ssh/known_hosts ~/.ssh/config 2>/dev/null || true
 
       - name: Sync compose + nginx config to server
-        if: env.skip != 'true'
         run: |
           set -euo pipefail
 
-          # Transient SSH/SCP drops are the single most common cause of a red
-          # deploy run, so every connection gets a bounded retry.
           retry() {
             local attempt=1
             local max=5
@@ -269,12 +273,10 @@ jobs:
           retry scp $SSH_FLAGS docker-compose.prod.yml "$SSH_USER@$SSH_HOST:$REMOTE_DIR/docker-compose.yml"
           # shellcheck disable=SC2086
           retry scp $SSH_FLAGS docker/nginx.conf "$SSH_USER@$SSH_HOST:$REMOTE_DIR/docker/nginx.conf"
-          # Ensure persistent config.json exists (never overwrite an existing one)
           # shellcheck disable=SC2086
           retry ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "test -f $REMOTE_DIR/config.json || printf '{}\n' > $REMOTE_DIR/config.json"
 
       - name: Pull images & rolling restart on server
-        if: env.skip != 'true'
         env:
           BACKEND_IMAGE: ${{ needs.build-backend.outputs.image_ref }}
           FRONTEND_IMAGE: ${{ needs.build-frontend.outputs.image_ref }}
@@ -283,8 +285,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # The rollout is idempotent, so retrying the whole remote script is safe
-          # when the long-lived SSH session drops mid-way.
           run_remote_deploy() {
             # shellcheck disable=SC2086
             ssh $SSH_FLAGS \
@@ -295,7 +295,6 @@ jobs:
               bash -s <<'EOF'
           set -euo pipefail
           cd "$REMOTE_DIR"
-          # Never pick up a stale COMPOSE_FILE from the server environment.
           unset COMPOSE_FILE COMPOSE_PATH || true
           export COMPOSE_PROJECT_NAME=helali
 
@@ -334,12 +333,9 @@ jobs:
             exit 1
           fi
           echo "--> Target images: backend=${BACKEND_IMAGE} frontend=${FRONTEND_IMAGE}"
-          echo "--> .env image pins:"
           grep -E '^(BACKEND_IMAGE|FRONTEND_IMAGE)=' .env
 
-          # Ensure production database/cache secrets exist AND are non-empty.
-          # Empty REDIS_PASSWORD breaks healthcheck: `redis-cli -a $PASS ping` → `redis-cli -a ping`.
-          # Empty POSTGRES_PASSWORD prevents first-boot postgres from starting.
+          # Non-empty secrets (empty REDIS_PASSWORD breaks healthcheck)
           ensure_nonempty_secret() {
             local key="$1"
             if ! grep -qE "^${key}=.+" .env; then
@@ -350,9 +346,6 @@ jobs:
           }
           ensure_nonempty_secret POSTGRES_PASSWORD
           ensure_nonempty_secret REDIS_PASSWORD
-          if ! grep -q '^ENCRYPTION_MASTER_KEY=' .env; then
-            echo "ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> .env
-          fi
           if ! grep -q '^JWT_SECRET=.\+' .env; then
             sed -i '/^JWT_SECRET=/d' .env || true
             echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
@@ -361,54 +354,13 @@ jobs:
             sed -i '/^JWT_REFRESH_SECRET=/d' .env || true
             echo "JWT_REFRESH_SECRET=$(openssl rand -base64 48)" >> .env
           fi
-          # Persistent Ed25519 keys (PEM with \n escapes — see crypto-keys.service.ts).
-          # Without these, every recreate mints ephemeral keys and wipes sessions.
-          if ! grep -q '^JWT_PRIVATE_KEY=.\+' .env || ! grep -q '^JWT_PUBLIC_KEY=.\+' .env; then
-            echo "--> Generating persistent JWT_PRIVATE_KEY / JWT_PUBLIC_KEY..."
-            sed -i '/^JWT_PRIVATE_KEY=/d;/^JWT_PUBLIC_KEY=/d' .env || true
-            jwt_tmp=$(mktemp -d)
-            openssl genpkey -algorithm Ed25519 -out "$jwt_tmp/private.pem"
-            openssl pkey -in "$jwt_tmp/private.pem" -pubout -out "$jwt_tmp/public.pem"
-            priv_esc=$(awk 'NF {printf "%s\\n", $0}' "$jwt_tmp/private.pem")
-            pub_esc=$(awk 'NF {printf "%s\\n", $0}' "$jwt_tmp/public.pem")
-            printf 'JWT_PRIVATE_KEY="%s"\n' "$priv_esc" >> .env
-            printf 'JWT_PUBLIC_KEY="%s"\n' "$pub_esc" >> .env
-            rm -rf "$jwt_tmp"
-          fi
-          if ! grep -q '^JWT_KEY_ID=.\+' .env; then
-            sed -i '/^JWT_KEY_ID=/d' .env || true
-            echo "JWT_KEY_ID=helali-ed25519-v1" >> .env
-          fi
 
-          # Remove legacy env keys if present
           sed -i '/^API_IMAGE=/d;/^WEB_IMAGE=/d' .env || true
-
-          # Legacy container names only — never delete the live app tier before
-          # the replacement is confirmed up (that previously left prod dark).
           docker rm -f helali-api helali-web 2>/dev/null || true
 
-          # Old split-stack deploys (infra/backend/frontend compose files) left
-          # containers named helali-postgres / helali-redis / … that are NOT part of
-          # COMPOSE_PROJECT_NAME=helali. `compose up` then fails with name conflict
-          # while `compose ps` stays empty — and dumps look like Redis "attacks".
-          VOLUME_OVERRIDE=docker-compose.volumes.override.yml
-          rm -f "$VOLUME_OVERRIDE"
-          # One "key|volume" per line — avoid multiline bash strings inside YAML `|` blocks.
-          : > /tmp/helali-reuse-volumes.txt
-
-          capture_volume() {
-            local container="$1"
-            local dest="$2"
-            local key="$3"
-            local vol
-            vol=$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"${dest}\"}}{{.Name}}{{end}}{{end}}" "$container" 2>/dev/null || true)
-            if [ -n "$vol" ]; then
-              echo "--> will reuse volume ${vol} for ${key} (from ${container})"
-              printf '%s|%s\n' "$key" "$vol" >> /tmp/helali-reuse-volumes.txt
-            fi
-          }
-
-          remove_foreign_named_container() {
+          # Free container names held by a foreign compose project (old split stack).
+          # Never delete live helali project containers before recreate succeeds.
+          remove_foreign() {
             local name="$1"
             if ! docker inspect "$name" >/dev/null 2>&1; then
               return 0
@@ -416,49 +368,18 @@ jobs:
             local project
             project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$name" 2>/dev/null || true)
             if [ "$project" = "helali" ]; then
-              echo "--> keep ${name} (already compose project=helali)"
               return 0
             fi
-            case "$name" in
-              helali-postgres) capture_volume "$name" /var/lib/postgresql/data helali_pgdata ;;
-              helali-redis) capture_volume "$name" /data helali_redisdata ;;
-              helali-minio) capture_volume "$name" /data helali_miniodata ;;
-            esac
-            echo "--> remove foreign ${name} (compose project='${project:-none}'); named volumes are kept"
-            docker inspect -f '{{range .Mounts}}{{println .Name .Destination}}{{end}}' "$name" 2>/dev/null || true
+            echo "--> remove foreign ${name} (project='${project:-none}'); volumes kept"
             docker rm -f "$name" >/dev/null
           }
-
-          # Only free data-layer names here. App containers are removed right before
-          # their recreate so the old site stays up until the new image is ready.
-          echo "--> Releasing data-layer container names for this compose project..."
           for c in helali-postgres helali-redis helali-minio; do
-            remove_foreign_named_container "$c"
+            remove_foreign "$c"
           done
-          if [ -s /tmp/helali-reuse-volumes.txt ]; then
-            {
-              echo "volumes:"
-              while IFS='|' read -r key vol; do
-                [ -n "$key" ] && [ -n "$vol" ] || continue
-                echo "  ${key}:"
-                echo "    external: true"
-                echo "    name: ${vol}"
-              done < /tmp/helali-reuse-volumes.txt
-            } > "$VOLUME_OVERRIDE"
-            echo "--> wrote ${VOLUME_OVERRIDE} to keep existing DB/redis/minio data"
-            cat "$VOLUME_OVERRIDE"
-          fi
-          compose() {
-            if [ -f "$VOLUME_OVERRIDE" ]; then
-              docker compose -f docker-compose.yml -f "$VOLUME_OVERRIDE" "$@"
-            else
-              docker compose -f docker-compose.yml "$@"
-            fi
-          }
 
           mkdir -p docker/certs
           if [ ! -s docker/certs/server.crt ] || [ ! -s docker/certs/server.key ]; then
-            echo "--> Creating the self-signed TLS certificate on the host..."
+            echo "--> Creating self-signed TLS certificate..."
             openssl req -x509 -nodes -days 825 -newkey rsa:2048 \
               -keyout docker/certs/server.key \
               -out docker/certs/server.crt \
@@ -466,127 +387,40 @@ jobs:
               -addext "subjectAltName=IP:${TLS_HOST:-5.159.49.36}"
           fi
 
-          # VPS disks fill up with old helali image tags + containerd layers.
-          # Prune BEFORE pull — post-deploy dangling prune is too late for ENOSPC.
-          # Never delete the images we are about to roll out (retry would re-pull them).
-          free_docker_disk() {
-            echo "--> Disk before Docker cleanup:"
-            df -h / /var/lib/docker 2>/dev/null || df -h /
-            docker system df 2>/dev/null || true
-            docker container prune -f >/dev/null 2>&1 || true
-            docker builder prune -af >/dev/null 2>&1 || true
-            docker volume prune -f >/dev/null 2>&1 || true
-            # Drop unused images except the target backend/frontend tags for this deploy.
-            docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | while read -r ref id; do
-              case "$ref" in
-                '<none>:<none>'|'<none>:'*) docker rmi -f "$id" 2>/dev/null || true ;;
-                "${BACKEND_IMAGE}"|"${FRONTEND_IMAGE}") ;;
-                *)
-                  if ! docker ps -a --format '{{.Image}}' | grep -qxF "$ref" \
-                    && ! docker ps -a --format '{{.Image}}' | grep -qxF "$id"; then
-                    docker rmi -f "$ref" 2>/dev/null || true
-                  fi
-                  ;;
-              esac
-            done
-            echo "--> Disk after Docker cleanup:"
-            df -h / /var/lib/docker 2>/dev/null || df -h /
-            docker system df 2>/dev/null || true
-          }
-
-          dump_data_layer_status() {
-            echo "--> Data-layer status (postgres/redis/minio):"
-            compose ps postgres redis minio || true
-            for c in helali-postgres helali-redis helali-minio; do
-              echo "---- ${c} health ----"
-              docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}} error={{.State.Error}}' "$c" 2>/dev/null || echo "(missing)"
-            done
-            echo "---- helali-postgres logs (tail) ----"
-            docker logs helali-postgres --tail 40 2>&1 || true
-            echo "---- helali-redis WARN/ERROR only (tail filtered) ----"
-            docker logs helali-redis --tail 200 2>&1 | grep -E '^(#|[*]|1:M).*?(error|Error|ERROR|SECURITY|Ready|Wrong|NOAUTH|Denied|OOM|MISCONF)' || docker logs helali-redis --tail 20 2>&1 || true
-            echo "---- helali-minio logs (tail) ----"
-            docker logs helali-minio --tail 40 2>&1 || true
-            df -h / || true
-          }
-
-          free_docker_disk
-
-          avail_kb=$(df -Pk / | awk 'NR==2 {print $4}')
-          if [ -n "${avail_kb}" ] && [ "${avail_kb}" -lt 2097152 ]; then
-            echo "::error::Less than 2GiB free on / after cleanup (${avail_kb} KiB). Free disk on the VPS, then re-run deploy."
-            exit 1
-          fi
-
           echo "--> Pulling latest container images..."
           pulled=0
           for attempt in 1 2 3 4 5; do
-            if compose pull backend frontend; then
+            if docker compose -f docker-compose.yml pull backend frontend; then
               pulled=1
               break
             fi
             echo "compose pull failed (attempt ${attempt}), retrying..."
-            free_docker_disk
             sleep $((attempt * 4))
           done
           if [ "$pulled" != 1 ]; then
-            echo "::error::docker compose pull failed after 5 attempts (often ENOSPC — check df -h on the VPS)"
+            echo "::error::docker compose pull failed after 5 attempts"
             df -h / || true
-            docker system df || true
             exit 1
           fi
-
-          wait_healthy() {
-            local name="$1"
-            local seconds="${2:-120}"
-            local i=0
-            while [ "$i" -lt "$seconds" ]; do
-              local health running
-              health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$name" 2>/dev/null || echo missing)
-              running=$(docker inspect --format '{{.State.Status}}' "$name" 2>/dev/null || echo missing)
-              if [ "$health" = "healthy" ]; then
-                echo "--> ${name} is healthy"
-                return 0
-              fi
-              echo "--> waiting on ${name}: state=${running} health=${health} (${i}s/${seconds}s)"
-              i=$((i + 5))
-              sleep 5
-            done
-            echo "::error::Timed out waiting for ${name} (state=$(docker inspect --format '{{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' "$name" 2>/dev/null || echo missing))"
-            docker logs "$name" --tail 40 2>&1 || true
-            return 1
-          }
 
           echo "--> Starting Postgres and Redis..."
-          if ! compose up -d postgres redis; then
-            echo "::error::Failed to start postgres/redis containers (often: name already in use by an old stack)"
-            echo "--> docker ps -a (helali*):"
-            docker ps -a --filter name=helali --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Label "com.docker.compose.project"}}' || true
-            dump_data_layer_status
+          if ! docker compose -f docker-compose.yml up -d postgres redis --wait --wait-timeout 90; then
+            echo "::error::Postgres or Redis failed to become healthy"
+            docker compose -f docker-compose.yml ps || true
+            docker logs helali-postgres --tail 50 || true
+            docker logs helali-redis --tail 50 || true
             exit 1
           fi
-          # Recreate once if still unhealthy (picks up fixed healthcheck / non-empty secrets).
-          if ! wait_healthy helali-postgres 90; then
-            echo "--> Recreating postgres once..."
-            compose up -d --force-recreate postgres || true
-            wait_healthy helali-postgres 90 || { dump_data_layer_status; exit 1; }
-          fi
-          if ! wait_healthy helali-redis 90; then
-            echo "--> Recreating redis once..."
-            compose up -d --force-recreate redis || true
-            wait_healthy helali-redis 90 || { dump_data_layer_status; exit 1; }
-          fi
 
-          # MinIO image has no curl — never include it in --wait (see docker-compose.prod.yml).
-          echo "--> Starting MinIO (no health wait)..."
-          if ! compose up -d minio; then
+          echo "--> Starting MinIO (no --wait; scratch image has no health binary)..."
+          if ! docker compose -f docker-compose.yml up -d minio; then
             echo "::error::MinIO failed to start"
-            dump_data_layer_status
+            docker logs helali-minio --tail 40 || true
             exit 1
           fi
 
           echo "--> Executing database migrations..."
-          if ! compose run --rm --no-deps backend \
+          if ! docker compose -f docker-compose.yml run --rm --no-deps backend \
             npx prisma migrate deploy --schema=apps/backend/prisma/schema.prisma; then
             echo "::error::Database migrations failed! Halting deployment to protect uptime."
             exit 1
@@ -596,16 +430,16 @@ jobs:
             local service="$1"
             local timeout="$2"
             echo "--> Starting ${service}..."
-            remove_foreign_named_container "helali-${service}"
-            if compose up -d --force-recreate --wait --wait-timeout "$timeout" "$service"; then
+            remove_foreign "helali-${service}"
+            if docker compose -f docker-compose.yml up -d --force-recreate --wait --wait-timeout "$timeout" "$service"; then
               return 0
             fi
             echo "--> ${service} failed; removing stale container_name and retrying once..."
             docker rm -f "helali-${service}" 2>/dev/null || true
-            compose up -d --force-recreate --wait --wait-timeout "$timeout" "$service"
+            docker compose -f docker-compose.yml up -d --force-recreate --wait --wait-timeout "$timeout" "$service"
           }
 
-          echo "--> Recreating app tier one service at a time (DB left running)..."
+          echo "--> Recreating app tier one service at a time..."
           if ! up_one backend 180; then
             echo "::error::backend failed to become healthy"
             docker logs helali-backend --tail 120 || true
@@ -631,21 +465,21 @@ jobs:
             fi
           done
 
-          echo "--> Verifying the running containers use the freshly built images..."
+          echo "--> Verifying running containers use the freshly built images..."
           EXPECTED_BACKEND_ID=$(docker image inspect --format '{{.Id}}' "$BACKEND_IMAGE" 2>/dev/null || echo '')
           EXPECTED_FRONTEND_ID=$(docker image inspect --format '{{.Id}}' "$FRONTEND_IMAGE" 2>/dev/null || echo '')
           RUNNING_BACKEND_ID=$(docker inspect --format '{{.Image}}' helali-backend 2>/dev/null || echo '')
           RUNNING_FRONTEND_ID=$(docker inspect --format '{{.Image}}' helali-frontend 2>/dev/null || echo '')
-          echo "    backend:  running=${RUNNING_BACKEND_ID} expected=${EXPECTED_BACKEND_ID} (${BACKEND_IMAGE})"
-          echo "    frontend: running=${RUNNING_FRONTEND_ID} expected=${EXPECTED_FRONTEND_ID} (${FRONTEND_IMAGE})"
+          echo "    backend:  running=${RUNNING_BACKEND_ID} expected=${EXPECTED_BACKEND_ID}"
+          echo "    frontend: running=${RUNNING_FRONTEND_ID} expected=${EXPECTED_FRONTEND_ID}"
           if [ -z "$RUNNING_BACKEND_ID" ] || [ "$RUNNING_BACKEND_ID" != "$EXPECTED_BACKEND_ID" ] \
             || [ -z "$RUNNING_FRONTEND_ID" ] || [ "$RUNNING_FRONTEND_ID" != "$EXPECTED_FRONTEND_ID" ]; then
-            echo "::error::Running containers are not on the built images; the deployment did not take effect"
+            echo "::error::Running containers are not on the built images"
             docker ps --filter name=helali || true
             exit 1
           fi
 
-          echo "--> Verifying published host ports (backend:3030 frontend:3031 nginx:3032)..."
+          echo "--> Verifying published host ports (3030/3031/3032)..."
           docker ps --filter name=helali --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
           BACKEND_PORTS=$(docker port helali-backend 3000/tcp 2>/dev/null || true)
           FRONTEND_PORTS=$(docker port helali-frontend 3000/tcp 2>/dev/null || true)
@@ -666,7 +500,7 @@ jobs:
             exit 1
           }
 
-          echo "--> Local health probe via nginx on the VPS..."
+          echo "--> Local health probe via nginx..."
           if ! docker exec helali-nginx wget -qO- http://127.0.0.1/api/v1/health; then
             echo "::error::nginx local /api/v1/health failed after recreate"
             docker logs helali-backend --tail 80 || true
@@ -676,7 +510,7 @@ jobs:
           fi
           echo ""
 
-          echo "--> Reloading nginx so the mounted config is applied..."
+          echo "--> Reloading nginx..."
           reloaded=0
           for attempt in $(seq 1 20); do
             if docker exec helali-nginx nginx -s reload; then
@@ -691,33 +525,28 @@ jobs:
             exit 1
           fi
 
-          echo "--> Cleaning up unused Docker images/cache after rollout..."
-          docker image prune -af || true
-          docker builder prune -af || true
-          df -h / || true
+          echo "--> Cleaning up dangling images..."
+          docker image prune -f || true
           EOF
           }
 
           attempt=1
-          max=2
+          max=3
           until run_remote_deploy; do
-            status=$?
             if [ "$attempt" -ge "$max" ]; then
-              echo "::error::Remote rollout failed after ${max} attempts (last exit=${status}). Scroll up for the first ::error:: in this job — Redis SECURITY ATTACK lines are scanners, not the deploy root cause."
-              # Avoid nested heredocs inside this step (breaks the runner script). Use -c instead.
+              echo "::error::Remote rollout failed after ${max} attempts"
               # shellcheck disable=SC2086
               ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" \
-                'cd /opt/helali 2>/dev/null || exit 0; echo "=== df -h / ==="; df -h /; echo "=== docker ps -a (helali) ==="; docker ps -a --filter name=helali --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"; echo "=== compose ps ==="; docker compose -f docker-compose.yml ps 2>/dev/null || true' \
+                'cd /opt/helali 2>/dev/null || exit 0; echo "=== df -h / ==="; df -h /; echo "=== docker ps -a (helali) ==="; docker ps -a --filter name=helali --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"' \
                 || true
               exit 1
             fi
-            echo "Remote rollout attempt ${attempt} failed (exit=${status}). Retrying in $((attempt * 10))s..."
+            echo "Remote rollout attempt ${attempt} failed. Retrying in $((attempt * 10))s..."
             sleep $((attempt * 10))
             attempt=$((attempt + 1))
           done
 
       - name: Production Health Check Verification
-        if: env.skip != 'true'
         run: |
           set -uo pipefail
 
@@ -734,15 +563,15 @@ jobs:
               missing=1
             fi
           done
-          echo "=== docker ps (saf-shekan) ==="
+          echo "=== docker ps (helali) ==="
           docker ps -a --filter name=helali --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}'
           if [ "$missing" -ne 0 ]; then
-            echo "::error::App containers are not running — the rolling restart step did not leave a live stack"
+            echo "::error::App containers are not running"
             exit 1
           fi
           REMOTE
 
-          echo "Verifying stack at https://${SSH_HOST}:3032 (nginx → frontend + /api/v1/health)..."
+          echo "Verifying stack at https://${SSH_HOST}:3032 ..."
           STACK_UP=false
           for i in $(seq 1 40); do
             if curl -kfsS --connect-timeout 5 "https://${SSH_HOST}:3032/api/v1/health" >/dev/null \
@@ -759,7 +588,6 @@ jobs:
 
           if [ "$STACK_UP" = false ]; then
             echo "::error::Deployment health check failed (port 3032 unreachable from GitHub runner)"
-            echo "=== Container status (via SSH, best effort) ==="
             # shellcheck disable=SC2086
             ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "docker ps -a --filter name=helali" || true
             # shellcheck disable=SC2086
@@ -771,10 +599,22 @@ jobs:
             exit 1
           fi
 
+          LOGIN_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://${SSH_HOST}:3032/login" || echo "000")
+          AUTH_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://${SSH_HOST}:3032/api/v1/auth/me" || echo "000")
+          echo "Post-deploy probe: /login=${LOGIN_CODE} /api/v1/auth/me=${AUTH_CODE}"
+          if [ "$LOGIN_CODE" != "200" ]; then
+            echo "::error::/login returned ${LOGIN_CODE} (expected 200)"
+            exit 1
+          fi
+          if [ "$AUTH_CODE" = "404" ]; then
+            echo "::error::/api/v1/auth/me returned 404 — backend may be stale"
+            exit 1
+          fi
+
           echo "All services deployed and verified successfully!"
 
       - name: Publish Deployment Summary
-        if: always() && env.skip != 'true'
+        if: always()
         run: |
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           ## helali Production Deployment Report
