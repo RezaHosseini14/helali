@@ -29,12 +29,14 @@ env:
 
 jobs:
   # ==========================================
-  # STAGE 1: Quality Gate, Lint & Tests
+  # STAGE 1: Quality Gate (lint + test only)
+  # Full `npm run build` is skipped here — Docker images already compile the apps.
+  # validate runs IN PARALLEL with docker builds to cut wall-clock time.
   # ==========================================
   validate:
-    name: Quality Gate (Build, Lint & Test)
+    name: Quality Gate (Lint & Test)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -47,7 +49,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: Run Lint
         run: npm run lint
@@ -55,15 +57,11 @@ jobs:
       - name: Run Tests
         run: npm run test
 
-      - name: Run Build
-        run: npm run build
-
   # ==========================================
-  # STAGE 2A: Build & Push Backend Image
+  # STAGE 2A: Build & Push Backend Image (parallel with validate)
   # ==========================================
   build-backend:
     name: Docker Backend (Build & GHCR Push)
-    needs: [validate]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -112,15 +110,19 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.ref }}
             ${{ steps.meta.outputs.image }}:latest
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
+          # GHA cache (fast) + registry cache (survives GHA eviction, shared across forks/runners)
+          cache-from: |
+            type=gha,scope=helali-backend
+            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=helali-backend
+            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
 
   # ==========================================
-  # STAGE 2B: Build & Push Frontend Image
+  # STAGE 2B: Build & Push Frontend Image (parallel with validate)
   # ==========================================
   build-frontend:
     name: Docker Frontend (Build & GHCR Push)
-    needs: [validate]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -177,45 +179,20 @@ jobs:
             MINIO_ENDPOINT=5.159.49.36
             MINIO_PORT=9010
             MINIO_USE_SSL=false
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
+          cache-from: |
+            type=gha,scope=helali-frontend
+            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
+          cache-to: |
+            type=gha,mode=max,scope=helali-frontend
+            type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
 
   # ==========================================
-  # STAGE 3A: Deployment Preflight
-  # ==========================================
-  # A missing deploy secret must never turn the pipeline red. When no SSH key
-  # is configured the deployment is skipped with a warning instead of failing.
-  preflight:
-    name: Deployment Preflight
-    needs: [build-backend, build-frontend]
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    outputs:
-      deploy_enabled: ${{ steps.check.outputs.deploy_enabled }}
-
-    steps:
-      - name: Detect deployment credentials
-        id: check
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          if [ -n "${SSH_PRIVATE_KEY}" ]; then
-            echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "Deployment credentials detected."
-          else
-            echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::SSH_PRIVATE_KEY is not configured. Skipping production deployment."
-          fi
-
-  # ==========================================
-  # STAGE 3B: Production Deployment to Server
+  # STAGE 3: Production Deployment (after validate + both images)
   # ==========================================
   deploy:
     name: Deploy to Production VPS
-    needs: [build-backend, build-frontend, preflight]
-    if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
+    needs: [validate, build-backend, build-frontend]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -232,16 +209,23 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
+          if [ -z "${SSH_PRIVATE_KEY}" ]; then
+            echo "::warning::SSH_PRIVATE_KEY is not configured. Skipping production deployment."
+            echo "skip=true" >> "$GITHUB_ENV"
+            exit 0
+          fi
           test -n "$SSH_HOST" || { echo "::error::Missing SSH_HOST"; exit 1; }
           test -n "$SSH_USER" || { echo "::error::Missing SSH_USER"; exit 1; }
-          test -n "$SSH_PRIVATE_KEY" || { echo "::error::Missing secret SSH_PRIVATE_KEY"; exit 1; }
+          echo "skip=false" >> "$GITHUB_ENV"
 
       - name: Setup SSH agent
+        if: env.skip != 'true'
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add server to known_hosts
+        if: env.skip != 'true'
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
@@ -259,6 +243,7 @@ jobs:
           chmod 600 ~/.ssh/known_hosts ~/.ssh/config 2>/dev/null || true
 
       - name: Sync compose + nginx config to server
+        if: env.skip != 'true'
         run: |
           set -euo pipefail
 
@@ -289,6 +274,7 @@ jobs:
           retry ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "test -f $REMOTE_DIR/config.json || printf '{}\n' > $REMOTE_DIR/config.json"
 
       - name: Pull images & rolling restart on server
+        if: env.skip != 'true'
         env:
           BACKEND_IMAGE: ${{ needs.build-backend.outputs.image_ref }}
           FRONTEND_IMAGE: ${{ needs.build-frontend.outputs.image_ref }}
@@ -706,7 +692,7 @@ jobs:
           }
 
           attempt=1
-          max=3
+          max=2
           until run_remote_deploy; do
             status=$?
             if [ "$attempt" -ge "$max" ]; then
@@ -724,6 +710,7 @@ jobs:
           done
 
       - name: Production Health Check Verification
+        if: env.skip != 'true'
         run: |
           set -uo pipefail
 
@@ -780,7 +767,7 @@ jobs:
           echo "All services deployed and verified successfully!"
 
       - name: Publish Deployment Summary
-        if: always()
+        if: always() && env.skip != 'true'
         run: |
           cat <<EOF >> "$GITHUB_STEP_SUMMARY"
           ## helali Production Deployment Report
