@@ -10,11 +10,11 @@ services:
     volumes:
       - helali_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-root} -d $${POSTGRES_DB:-helali_database}"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-root}\" -d \"$${POSTGRES_DB:-helali_database}\" || exit 1"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 12
+      start_period: 20s
     deploy:
       resources:
         limits:
@@ -34,11 +34,11 @@ services:
     volumes:
       - helali_redisdata:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep PONG"]
-      interval: 10s
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 5s
+      retries: 12
+      start_period: 10s
     deploy:
       resources:
         limits:

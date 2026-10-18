@@ -351,13 +351,19 @@ jobs:
           echo "--> .env image pins:"
           grep -E '^(BACKEND_IMAGE|FRONTEND_IMAGE)=' .env
 
-          # Ensure production database, cache, and encryption secrets exist in .env
-          if ! grep -q '^POSTGRES_PASSWORD=' .env; then
-            echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)" >> .env
-          fi
-          if ! grep -q '^REDIS_PASSWORD=' .env; then
-            echo "REDIS_PASSWORD=$(openssl rand -hex 24)" >> .env
-          fi
+          # Ensure production database/cache secrets exist AND are non-empty.
+          # Empty REDIS_PASSWORD breaks healthcheck: `redis-cli -a $PASS ping` → `redis-cli -a ping`.
+          # Empty POSTGRES_PASSWORD prevents first-boot postgres from starting.
+          ensure_nonempty_secret() {
+            local key="$1"
+            if ! grep -qE "^${key}=.+" .env; then
+              sed -i "/^${key}=/d" .env || true
+              echo "${key}=$(openssl rand -hex 24)" >> .env
+              echo "--> Wrote non-empty ${key} to .env"
+            fi
+          }
+          ensure_nonempty_secret POSTGRES_PASSWORD
+          ensure_nonempty_secret REDIS_PASSWORD
           if ! grep -q '^ENCRYPTION_MASTER_KEY=' .env; then
             echo "ENCRYPTION_MASTER_KEY=$(openssl rand -hex 32)" >> .env
           fi
@@ -475,11 +481,43 @@ jobs:
             exit 1
           fi
 
-          echo "--> Starting Postgres and Redis (wait for healthy)..."
-          if ! docker compose -f docker-compose.yml up -d postgres redis --wait --wait-timeout 120; then
-            echo "::error::Postgres or Redis failed to become healthy"
+          wait_healthy() {
+            local name="$1"
+            local seconds="${2:-120}"
+            local i=0
+            while [ "$i" -lt "$seconds" ]; do
+              local health running
+              health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$name" 2>/dev/null || echo missing)
+              running=$(docker inspect --format '{{.State.Status}}' "$name" 2>/dev/null || echo missing)
+              if [ "$health" = "healthy" ]; then
+                echo "--> ${name} is healthy"
+                return 0
+              fi
+              echo "--> waiting on ${name}: state=${running} health=${health} (${i}s/${seconds}s)"
+              i=$((i + 5))
+              sleep 5
+            done
+            echo "::error::Timed out waiting for ${name} (state=$(docker inspect --format '{{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' "$name" 2>/dev/null || echo missing))"
+            docker logs "$name" --tail 40 2>&1 || true
+            return 1
+          }
+
+          echo "--> Starting Postgres and Redis..."
+          if ! docker compose -f docker-compose.yml up -d postgres redis; then
+            echo "::error::Failed to start postgres/redis containers"
             dump_data_layer_status
             exit 1
+          fi
+          # Recreate once if still unhealthy (picks up fixed healthcheck / non-empty secrets).
+          if ! wait_healthy helali-postgres 90; then
+            echo "--> Recreating postgres once..."
+            docker compose -f docker-compose.yml up -d --force-recreate postgres || true
+            wait_healthy helali-postgres 90 || { dump_data_layer_status; exit 1; }
+          fi
+          if ! wait_healthy helali-redis 90; then
+            echo "--> Recreating redis once..."
+            docker compose -f docker-compose.yml up -d --force-recreate redis || true
+            wait_healthy helali-redis 90 || { dump_data_layer_status; exit 1; }
           fi
 
           # MinIO image has no curl — never include it in --wait (see docker-compose.prod.yml).

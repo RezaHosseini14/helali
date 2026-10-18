@@ -6,15 +6,16 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-helali_database}
       POSTGRES_USER: ${POSTGRES_USER:-root}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
     volumes:
       - helali_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-root} -d $${POSTGRES_DB:-helali_database}"]
-      interval: 10s
+      # pg_isready does not need a password; keep this independent of .env secrets.
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-root}\" -d \"$${POSTGRES_DB:-helali_database}\" || exit 1"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 12
+      start_period: 20s
     deploy:
       resources:
         limits:
@@ -29,16 +30,18 @@ services:
     restart: unless-stopped
     command: ["sh", "-c", "exec redis-server --requirepass \"$${REDIS_PASSWORD}\" --appendonly yes --appendfsync everysec --maxmemory \"$${REDIS_MAXMEMORY:-128mb}\" --maxmemory-policy volatile-lru"]
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set in .env}
       REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-128mb}
     volumes:
       - helali_redisdata:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep PONG"]
-      interval: 10s
+      # Empty REDIS_PASSWORD turns `redis-cli -a $PASS ping` into `redis-cli -a ping` (broken).
+      # Prefer REDISCLI_AUTH so the password is never a positional -a argument.
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli --no-auth-warning ping | grep -q PONG"]
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 5s
+      retries: 12
+      start_period: 10s
     deploy:
       resources:
         limits:
