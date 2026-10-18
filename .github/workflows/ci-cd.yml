@@ -393,7 +393,8 @@ jobs:
           # while `compose ps` stays empty — and dumps look like Redis "attacks".
           VOLUME_OVERRIDE=docker-compose.volumes.override.yml
           rm -f "$VOLUME_OVERRIDE"
-          reuse_volume_lines=""
+          # One "key|volume" per line — avoid multiline bash strings inside YAML `|` blocks.
+          : > /tmp/helali-reuse-volumes.txt
 
           capture_volume() {
             local container="$1"
@@ -403,10 +404,7 @@ jobs:
             vol=$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"${dest}\"}}{{.Name}}{{end}}{{end}}" "$container" 2>/dev/null || true)
             if [ -n "$vol" ]; then
               echo "--> will reuse volume ${vol} for ${key} (from ${container})"
-              reuse_volume_lines="${reuse_volume_lines}
-  ${key}:
-    external: true
-    name: ${vol}"
+              printf '%s|%s\n' "$key" "$vol" >> /tmp/helali-reuse-volumes.txt
             fi
           }
 
@@ -437,9 +435,18 @@ jobs:
           for c in helali-postgres helali-redis helali-minio; do
             remove_foreign_named_container "$c"
           done
-          if [ -n "$reuse_volume_lines" ]; then
-            printf 'volumes:%s\n' "$reuse_volume_lines" > "$VOLUME_OVERRIDE"
+          if [ -s /tmp/helali-reuse-volumes.txt ]; then
+            {
+              echo "volumes:"
+              while IFS='|' read -r key vol; do
+                [ -n "$key" ] && [ -n "$vol" ] || continue
+                echo "  ${key}:"
+                echo "    external: true"
+                echo "    name: ${vol}"
+              done < /tmp/helali-reuse-volumes.txt
+            } > "$VOLUME_OVERRIDE"
             echo "--> wrote ${VOLUME_OVERRIDE} to keep existing DB/redis/minio data"
+            cat "$VOLUME_OVERRIDE"
           fi
           compose() {
             if [ -f "$VOLUME_OVERRIDE" ]; then
