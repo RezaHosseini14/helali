@@ -3,9 +3,11 @@
 import { Icon } from '@iconify/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 
+import ChangelogModal from '@/components/layouts/dashboard/ChangelogModal';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { authKeys, useCurrentUser } from '@/features/auth/hooks/use-current-user';
@@ -20,6 +22,7 @@ function Header() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
+  const [changelogOpen, setChangelogOpen] = useState(false);
 
   const { mutateAsync: logoutMutate, isPending: isLoggingOut } = useMutation({
     mutationFn: logout,
@@ -129,6 +132,19 @@ function Header() {
 
               <li className="w-full">
                 <Button
+                  variant="ghost"
+                  className="flex h-full w-full items-center justify-between px-3 py-2"
+                  onClick={() => {
+                    setChangelogOpen(true);
+                  }}
+                >
+                  <span>تغییرات نسخه</span>
+                  <Icon icon="solar:document-text-bold-duotone" fontSize={22} />
+                </Button>
+              </li>
+
+              <li className="w-full">
+                <Button
                   variant="destructive"
                   className="flex h-full w-full items-center justify-between px-3 py-2"
                   disabled={isLoggingOut}
@@ -144,6 +160,8 @@ function Header() {
           </div>
         </div>
       </div>
+
+      <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </header>
   );
 }

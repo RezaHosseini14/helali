@@ -10,6 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppAbility } from '@helali/shared';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { APP_VERSION } from '@/data/changelog';
 import { useAppAbility } from '@/features/auth/context/ability-provider';
 import {
   dashboardMenuItems,
@@ -161,7 +162,7 @@ function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed z-50 flex overflow-hidden border border-border bg-card text-foreground shadow-sm transition-[transform,width,inset] duration-300 ease-in-out',
+        'fixed z-50 flex items-stretch overflow-hidden border border-border bg-card text-foreground shadow-sm transition-[transform,width,inset] duration-300 ease-in-out',
         'start-0 top-0 bottom-0 w-[min(18rem,88vw)] rounded-none border-y-0 border-s-0 sm:rounded-e-2xl',
         'lg:start-8 lg:top-8 lg:bottom-8 lg:rounded-2xl lg:border',
         isExpanded ? 'lg:w-72' : 'lg:w-16',
@@ -172,93 +173,111 @@ function Sidebar() {
     >
       <div
         className={cn(
-          'flex w-16 shrink-0 flex-col items-center gap-6 transition-[padding] duration-300 ease-in-out',
+          'flex h-full w-16 shrink-0 flex-col items-center gap-6 self-stretch transition-[padding] duration-300 ease-in-out',
           isExpanded ? 'py-8' : 'py-3 max-lg:py-8',
         )}
       >
-        {visibleMenuItems.map((item, index) => {
-          const isActive = expandedMenuIndex === index;
+        <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-6 overflow-y-auto">
+          {visibleMenuItems.map((item, index) => {
+            const isActive = expandedMenuIndex === index;
 
-          return (
-            <Tooltip key={item.title}>
-              <TooltipTrigger
-                render={
-                  <button
-                    type="button"
-                    onClick={() => handleShowChildren(index)}
-                    aria-current={isActive ? 'page' : undefined}
-                    className={cn(
-                      'grid size-12 place-content-center rounded-2xl transition-all',
-                      isActive
-                        ? 'bg-mainstructure text-white shadow-sm'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
+            return (
+              <Tooltip key={item.title}>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      onClick={() => handleShowChildren(index)}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={cn(
+                        'grid size-12 place-content-center rounded-2xl transition-all',
+                        isActive
+                          ? 'bg-mainstructure text-white shadow-sm'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )}
+                    />
+                  }
+                >
+                  <Icon
+                    icon={item.icon}
+                    className={cn('size-7', isActive ? 'text-white' : 'text-muted-foreground')}
                   />
-                }
-              >
-                <Icon
-                  icon={item.icon}
-                  className={cn('size-7', isActive ? 'text-white' : 'text-muted-foreground')}
-                />
-              </TooltipTrigger>
-              <TooltipContent side="right">{item.title}</TooltipContent>
-            </Tooltip>
-          );
-        })}
+                </TooltipTrigger>
+                <TooltipContent side="right">{item.title}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+
+        <p
+          className="mt-auto shrink-0 px-1 pb-1 text-center text-[10px] font-medium leading-tight text-muted-foreground"
+          title={`نسخه ${APP_VERSION}`}
+          aria-label={`نسخه ${APP_VERSION}`}
+        >
+          v{APP_VERSION}
+        </p>
       </div>
 
       <div
         className={cn(
-          'min-w-0 flex-1 overflow-y-auto border-s border-border transition-[opacity,padding] duration-300 ease-in-out',
+          'flex h-full min-w-0 flex-1 flex-col self-stretch border-s border-border transition-[opacity,padding] duration-300 ease-in-out',
           isExpanded
             ? 'px-2 py-4 opacity-100'
             : 'pointer-events-none p-0 opacity-0 max-lg:pointer-events-none',
         )}
       >
-        {visibleMenuItems[expandedMenuIndex]?.children ? (
-          <motion.ul
-            key={expandedMenuIndex}
-            className="flex w-full min-w-0 flex-col gap-1.5"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <p className="mb-2 truncate border-b border-border px-2 pb-2 text-base font-bold text-foreground">
-              {visibleMenuItems[expandedMenuIndex].title}
-            </p>
-            {visibleMenuItems[expandedMenuIndex].children?.map((child) => {
-              const isChildActive = activeChildUrl === child.url;
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {visibleMenuItems[expandedMenuIndex]?.children ? (
+            <motion.ul
+              key={expandedMenuIndex}
+              className="flex w-full min-w-0 flex-col gap-1.5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <p className="mb-2 truncate border-b border-border px-2 pb-2 text-base font-bold text-foreground">
+                {visibleMenuItems[expandedMenuIndex].title}
+              </p>
+              {visibleMenuItems[expandedMenuIndex].children?.map((child) => {
+                const isChildActive = activeChildUrl === child.url;
 
-              return (
-                <li key={child.url} className="min-w-0">
-                  <Link
-                    href={child.url}
-                    aria-current={isChildActive ? 'page' : undefined}
-                    tabIndex={isExpanded ? undefined : -1}
-                    onClick={handleNavigate}
-                    className={cn(
-                      'flex min-w-0 items-center gap-2 rounded-xl px-2 py-2 transition-colors',
-                      isChildActive
-                        ? 'bg-mainstructure text-white shadow-sm'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                  >
-                    <Icon
-                      icon={child.icon}
+                return (
+                  <li key={child.url} className="min-w-0">
+                    <Link
+                      href={child.url}
+                      aria-current={isChildActive ? 'page' : undefined}
+                      tabIndex={isExpanded ? undefined : -1}
+                      onClick={handleNavigate}
                       className={cn(
-                        'size-5 shrink-0',
-                        isChildActive ? 'text-white' : 'text-muted-foreground',
+                        'flex min-w-0 items-center gap-2 rounded-xl px-2 py-2 transition-colors',
+                        isChildActive
+                          ? 'bg-mainstructure text-white shadow-sm'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                       )}
-                    />
-                    <span className="min-w-0 truncate text-sm font-medium">{child.title}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </motion.ul>
-        ) : (
-          <p className="px-2 text-sm text-muted-foreground">زیرمنویی موجود نیست</p>
-        )}
+                    >
+                      <Icon
+                        icon={child.icon}
+                        className={cn(
+                          'size-5 shrink-0',
+                          isChildActive ? 'text-white' : 'text-muted-foreground',
+                        )}
+                      />
+                      <span className="min-w-0 truncate text-sm font-medium">{child.title}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </motion.ul>
+          ) : (
+            <p className="px-2 text-sm text-muted-foreground">زیرمنویی موجود نیست</p>
+          )}
+        </div>
+
+        {isExpanded ? (
+          <p className="mt-auto shrink-0 truncate border-t border-border px-2 pt-3 text-xs text-muted-foreground">
+            نسخه {APP_VERSION}
+          </p>
+        ) : null}
       </div>
     </aside>
   );

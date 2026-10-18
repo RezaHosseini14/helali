@@ -1,72 +1,108 @@
-# Public images are pulled from ArvanCloud Iranian registry mirror.
-
 services:
   postgres:
-    image: docker.arvancloud.ir/library/postgres:16-alpine
+    image: postgres:16-alpine
     container_name: helali-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: root
-      POSTGRES_DB: helali_database
-    ports:
-      - '5432:5432'
+      POSTGRES_DB: ${POSTGRES_DB:-helali_database}
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-root}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - helali_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U root -d helali_database']
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-root} -d $${POSTGRES_DB:-helali_database}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
     networks:
-      - helali-network
+      - helali-net
 
   redis:
-    image: docker.arvancloud.ir/library/redis:7-alpine
+    image: redis:7-alpine
     container_name: helali-redis
     restart: unless-stopped
-    ports:
-      - '6379:6379'
+    command: ["sh", "-c", "exec redis-server --requirepass \"$${REDIS_PASSWORD}\" --appendonly yes --appendfsync everysec --maxmemory \"$${REDIS_MAXMEMORY:-128mb}\" --maxmemory-policy volatile-lru"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-helali_redis_dev}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-128mb}
     volumes:
-      - redis_data:/data
+      - helali_redisdata:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ["CMD-SHELL", "redis-cli -a $${REDIS_PASSWORD} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     networks:
-      - helali-network
+      - helali-net
 
   minio:
-    image: docker.arvancloud.ir/minio/minio:RELEASE.2022-10-24T18-35-07Z
+    image: minio/minio:RELEASE.2022-10-24T18-35-07Z
     container_name: helali-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minio99
-      MINIO_ROOT_PASSWORD: minio123
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minio99}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minio123}
+      MINIO_API_CORS_ALLOW_ORIGIN: '*'
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - "${MINIO_PUBLIC_PORT:-9010}:9000"
+      - "${MINIO_CONSOLE_PORT:-9011}:9001"
     volumes:
-      - minio_data:/data
+      - helali_miniodata:/data
     healthcheck:
-      test: ['CMD', 'mc', 'ready', 'local']
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
     networks:
-      - helali-network
+      - helali-net
 
   backend:
+    image: ${BACKEND_IMAGE:-helali-backend:latest}
     build:
       context: .
-      dockerfile: apps/backend/Dockerfile
+      dockerfile: docker/Dockerfile.backend
     container_name: helali-backend
     restart: unless-stopped
-    profiles:
-      - full
+    ports:
+      - "${BACKEND_PORT:-3030}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      BACKEND_PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-root}:${POSTGRES_PASSWORD:-root}@postgres:5432/${POSTGRES_DB:-helali_database}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD:-helali_redis_dev}@redis:6379
+      BULLMQ_PREFIX: helali-prod
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-12h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      COOKIE_SECURE: "false"
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost}
+      MINIO_PUBLIC_PORT: ${MINIO_PUBLIC_PORT:-9010}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minio99}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minio123}
+      MINIO_USE_SSL: "false"
+      STORAGE_DRIVER: minio
+      API_ENCRYPTION_ENABLED: "false"
+    volumes:
+      - helali_data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,62 +110,88 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://root:root@postgres:5432/helali_database?schema=public
-      REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      BACKEND_PORT: 4000
-      CORS_ORIGIN: http://localhost:3000
-      COOKIE_SECURE: 'false'
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: minio99
-      MINIO_SECRET_KEY: minio123
-      MINIO_USE_SSL: 'false'
-      STORAGE_DRIVER: minio
-    ports:
-      - '${BACKEND_HOST_PORT:-3030}:4000'
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/api/v1/health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
-      - helali-network
+      - helali-net
 
   frontend:
+    image: ${FRONTEND_IMAGE:-helali-frontend:latest}
     build:
       context: .
-      dockerfile: apps/frontend/Dockerfile
+      dockerfile: docker/Dockerfile.frontend
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3032/api/v1}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3032}
+        BACKEND_INTERNAL_ORIGIN: http://backend:3000
     container_name: helali-frontend
     restart: unless-stopped
-    profiles:
-      - full
+    ports:
+      - "${FRONTEND_PORT:-3031}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      API_URL: http://backend:3000/api/v1
+      BACKEND_INTERNAL_ORIGIN: http://backend:3000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3032/api/v1}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3032}
     depends_on:
       backend:
         condition: service_healthy
-    environment:
-      NODE_ENV: production
-      NEXT_PUBLIC_API_URL: http://localhost:4000/api/v1
-    ports:
-      - '${FRONTEND_HOST_PORT:-3031}:3000'
     healthcheck:
-      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000']
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
     networks:
-      - helali-network
+      - helali-net
 
-volumes:
-  postgres_data:
-  redis_data:
-  minio_data:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: helali-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-3032}:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - helali-net
 
 networks:
-  helali-network:
+  helali-net:
     driver: bridge
+
+volumes:
+  helali_pgdata:
+  helali_redisdata:
+  helali_miniodata:
+  helali_data:
