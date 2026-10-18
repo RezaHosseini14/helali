@@ -401,6 +401,68 @@ jobs:
           # the replacement is confirmed up (that previously left prod dark).
           docker rm -f helali-api helali-web 2>/dev/null || true
 
+          # Old split-stack deploys (infra/backend/frontend compose files) left
+          # containers named helali-postgres / helali-redis / … that are NOT part of
+          # COMPOSE_PROJECT_NAME=helali. `compose up` then fails with name conflict
+          # while `compose ps` stays empty — and dumps look like Redis "attacks".
+          VOLUME_OVERRIDE=docker-compose.volumes.override.yml
+          rm -f "$VOLUME_OVERRIDE"
+          reuse_volume_lines=""
+
+          capture_volume() {
+            local container="$1"
+            local dest="$2"
+            local key="$3"
+            local vol
+            vol=$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"${dest}\"}}{{.Name}}{{end}}{{end}}" "$container" 2>/dev/null || true)
+            if [ -n "$vol" ]; then
+              echo "--> will reuse volume ${vol} for ${key} (from ${container})"
+              reuse_volume_lines="${reuse_volume_lines}
+  ${key}:
+    external: true
+    name: ${vol}"
+            fi
+          }
+
+          remove_foreign_named_container() {
+            local name="$1"
+            if ! docker inspect "$name" >/dev/null 2>&1; then
+              return 0
+            fi
+            local project
+            project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$name" 2>/dev/null || true)
+            if [ "$project" = "helali" ]; then
+              echo "--> keep ${name} (already compose project=helali)"
+              return 0
+            fi
+            case "$name" in
+              helali-postgres) capture_volume "$name" /var/lib/postgresql/data helali_pgdata ;;
+              helali-redis) capture_volume "$name" /data helali_redisdata ;;
+              helali-minio) capture_volume "$name" /data helali_miniodata ;;
+            esac
+            echo "--> remove foreign ${name} (compose project='${project:-none}'); named volumes are kept"
+            docker inspect -f '{{range .Mounts}}{{println .Name .Destination}}{{end}}' "$name" 2>/dev/null || true
+            docker rm -f "$name" >/dev/null
+          }
+
+          # Only free data-layer names here. App containers are removed right before
+          # their recreate so the old site stays up until the new image is ready.
+          echo "--> Releasing data-layer container names for this compose project..."
+          for c in helali-postgres helali-redis helali-minio; do
+            remove_foreign_named_container "$c"
+          done
+          if [ -n "$reuse_volume_lines" ]; then
+            printf 'volumes:%s\n' "$reuse_volume_lines" > "$VOLUME_OVERRIDE"
+            echo "--> wrote ${VOLUME_OVERRIDE} to keep existing DB/redis/minio data"
+          fi
+          compose() {
+            if [ -f "$VOLUME_OVERRIDE" ]; then
+              docker compose -f docker-compose.yml -f "$VOLUME_OVERRIDE" "$@"
+            else
+              docker compose -f docker-compose.yml "$@"
+            fi
+          }
+
           mkdir -p docker/certs
           if [ ! -s docker/certs/server.crt ] || [ ! -s docker/certs/server.key ]; then
             echo "--> Creating the self-signed TLS certificate on the host..."
@@ -441,7 +503,7 @@ jobs:
 
           dump_data_layer_status() {
             echo "--> Data-layer status (postgres/redis/minio):"
-            docker compose -f docker-compose.yml ps postgres redis minio || true
+            compose ps postgres redis minio || true
             for c in helali-postgres helali-redis helali-minio; do
               echo "---- ${c} health ----"
               docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}} error={{.State.Error}}' "$c" 2>/dev/null || echo "(missing)"
@@ -466,7 +528,7 @@ jobs:
           echo "--> Pulling latest container images..."
           pulled=0
           for attempt in 1 2 3 4 5; do
-            if docker compose -f docker-compose.yml pull backend frontend; then
+            if compose pull backend frontend; then
               pulled=1
               break
             fi
@@ -503,33 +565,35 @@ jobs:
           }
 
           echo "--> Starting Postgres and Redis..."
-          if ! docker compose -f docker-compose.yml up -d postgres redis; then
-            echo "::error::Failed to start postgres/redis containers"
+          if ! compose up -d postgres redis; then
+            echo "::error::Failed to start postgres/redis containers (often: name already in use by an old stack)"
+            echo "--> docker ps -a (helali*):"
+            docker ps -a --filter name=helali --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Label "com.docker.compose.project"}}' || true
             dump_data_layer_status
             exit 1
           fi
           # Recreate once if still unhealthy (picks up fixed healthcheck / non-empty secrets).
           if ! wait_healthy helali-postgres 90; then
             echo "--> Recreating postgres once..."
-            docker compose -f docker-compose.yml up -d --force-recreate postgres || true
+            compose up -d --force-recreate postgres || true
             wait_healthy helali-postgres 90 || { dump_data_layer_status; exit 1; }
           fi
           if ! wait_healthy helali-redis 90; then
             echo "--> Recreating redis once..."
-            docker compose -f docker-compose.yml up -d --force-recreate redis || true
+            compose up -d --force-recreate redis || true
             wait_healthy helali-redis 90 || { dump_data_layer_status; exit 1; }
           fi
 
           # MinIO image has no curl — never include it in --wait (see docker-compose.prod.yml).
           echo "--> Starting MinIO (no health wait)..."
-          if ! docker compose -f docker-compose.yml up -d minio; then
+          if ! compose up -d minio; then
             echo "::error::MinIO failed to start"
             dump_data_layer_status
             exit 1
           fi
 
           echo "--> Executing database migrations..."
-          if ! docker compose -f docker-compose.yml run --rm --no-deps backend \
+          if ! compose run --rm --no-deps backend \
             npx prisma migrate deploy --schema=apps/backend/prisma/schema.prisma; then
             echo "::error::Database migrations failed! Halting deployment to protect uptime."
             exit 1
@@ -539,12 +603,13 @@ jobs:
             local service="$1"
             local timeout="$2"
             echo "--> Starting ${service}..."
-            if docker compose -f docker-compose.yml up -d --force-recreate --wait --wait-timeout "$timeout" "$service"; then
+            remove_foreign_named_container "helali-${service}"
+            if compose up -d --force-recreate --wait --wait-timeout "$timeout" "$service"; then
               return 0
             fi
             echo "--> ${service} failed; removing stale container_name and retrying once..."
             docker rm -f "helali-${service}" 2>/dev/null || true
-            docker compose -f docker-compose.yml up -d --force-recreate --wait --wait-timeout "$timeout" "$service"
+            compose up -d --force-recreate --wait --wait-timeout "$timeout" "$service"
           }
 
           echo "--> Recreating app tier one service at a time (DB left running)..."
