@@ -40,8 +40,11 @@ const nextConfig = {
   // Root AGENTS.md already documents Next 16 agent rules for this monorepo.
   agentRules: false,
   // Large multipart uploads through rewrite otherwise die around ~30s with bare 500.
+  // lucide-react ships thousands of icons; without this, standalone traces the whole package
+  // and frontend image layers blow past small VPS disks during `docker pull`.
   experimental: {
     proxyTimeout: 600_000,
+    optimizePackageImports: ['lucide-react', '@iconify/react'],
   },
   async rewrites() {
     return [

@@ -405,6 +405,58 @@ jobs:
               -addext "subjectAltName=IP:${TLS_HOST:-5.159.49.36}"
           fi
 
+          # VPS disks fill up with old helali image tags + containerd layers.
+          # Prune BEFORE pull — post-deploy dangling prune is too late for ENOSPC.
+          # Never delete the images we are about to roll out (retry would re-pull them).
+          free_docker_disk() {
+            echo "--> Disk before Docker cleanup:"
+            df -h / /var/lib/docker 2>/dev/null || df -h /
+            docker system df 2>/dev/null || true
+            docker container prune -f >/dev/null 2>&1 || true
+            docker builder prune -af >/dev/null 2>&1 || true
+            docker volume prune -f >/dev/null 2>&1 || true
+            # Drop unused images except the target backend/frontend tags for this deploy.
+            docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | while read -r ref id; do
+              case "$ref" in
+                '<none>:<none>'|'<none>:'*) docker rmi -f "$id" 2>/dev/null || true ;;
+                "${BACKEND_IMAGE}"|"${FRONTEND_IMAGE}") ;;
+                *)
+                  if ! docker ps -a --format '{{.Image}}' | grep -qxF "$ref" \
+                    && ! docker ps -a --format '{{.Image}}' | grep -qxF "$id"; then
+                    docker rmi -f "$ref" 2>/dev/null || true
+                  fi
+                  ;;
+              esac
+            done
+            echo "--> Disk after Docker cleanup:"
+            df -h / /var/lib/docker 2>/dev/null || df -h /
+            docker system df 2>/dev/null || true
+          }
+
+          dump_data_layer_status() {
+            echo "--> Data-layer status (postgres/redis/minio):"
+            docker compose -f docker-compose.yml ps postgres redis minio || true
+            for c in helali-postgres helali-redis helali-minio; do
+              echo "---- ${c} health ----"
+              docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}} error={{.State.Error}}' "$c" 2>/dev/null || echo "(missing)"
+            done
+            echo "---- helali-postgres logs (tail) ----"
+            docker logs helali-postgres --tail 40 2>&1 || true
+            echo "---- helali-redis WARN/ERROR only (tail filtered) ----"
+            docker logs helali-redis --tail 200 2>&1 | grep -E '^(#|[*]|1:M).*?(error|Error|ERROR|SECURITY|Ready|Wrong|NOAUTH|Denied|OOM|MISCONF)' || docker logs helali-redis --tail 20 2>&1 || true
+            echo "---- helali-minio logs (tail) ----"
+            docker logs helali-minio --tail 40 2>&1 || true
+            df -h / || true
+          }
+
+          free_docker_disk
+
+          avail_kb=$(df -Pk / | awk 'NR==2 {print $4}')
+          if [ -n "${avail_kb}" ] && [ "${avail_kb}" -lt 2097152 ]; then
+            echo "::error::Less than 2GiB free on / after cleanup (${avail_kb} KiB). Free disk on the VPS, then re-run deploy."
+            exit 1
+          fi
+
           echo "--> Pulling latest container images..."
           pulled=0
           for attempt in 1 2 3 4 5; do
@@ -413,19 +465,28 @@ jobs:
               break
             fi
             echo "compose pull failed (attempt ${attempt}), retrying..."
+            free_docker_disk
             sleep $((attempt * 4))
           done
           if [ "$pulled" != 1 ]; then
-            echo "::error::docker compose pull failed after 5 attempts"
+            echo "::error::docker compose pull failed after 5 attempts (often ENOSPC — check df -h on the VPS)"
+            df -h / || true
+            docker system df || true
             exit 1
           fi
 
-          echo "--> Starting Postgres and Redis data layer..."
-          if ! docker compose -f docker-compose.yml up -d postgres redis minio --wait --wait-timeout 90; then
-            echo "::error::Postgres or Redis failed to become healthy within 60s"
-            docker compose -f docker-compose.yml ps || true
-            docker logs helali-postgres --tail 50 || true
-            docker logs helali-redis --tail 50 || true
+          echo "--> Starting Postgres and Redis (wait for healthy)..."
+          if ! docker compose -f docker-compose.yml up -d postgres redis --wait --wait-timeout 120; then
+            echo "::error::Postgres or Redis failed to become healthy"
+            dump_data_layer_status
+            exit 1
+          fi
+
+          # MinIO image has no curl — never include it in --wait (see docker-compose.prod.yml).
+          echo "--> Starting MinIO (no health wait)..."
+          if ! docker compose -f docker-compose.yml up -d minio; then
+            echo "::error::MinIO failed to start"
+            dump_data_layer_status
             exit 1
           fi
 
@@ -534,19 +595,33 @@ jobs:
             exit 1
           fi
 
-          echo "--> Cleaning up unused dangling images..."
-          docker image prune -f || true
+          echo "--> Cleaning up unused Docker images/cache after rollout..."
+          docker image prune -af || true
+          docker builder prune -af || true
+          df -h / || true
           EOF
           }
 
           attempt=1
           max=3
           until run_remote_deploy; do
+            status=$?
             if [ "$attempt" -ge "$max" ]; then
-              echo "::error::Remote rollout failed after ${max} attempts"
+              echo "::error::Remote rollout failed after ${max} attempts (last exit=${status}). Scroll up for the first ::error:: in this job — Redis SECURITY ATTACK lines are scanners, not the deploy root cause."
+              # shellcheck disable=SC2086
+              ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" bash -s <<'DIAG' || true
+              set +e
+              cd /opt/helali 2>/dev/null || exit 0
+              echo "=== df -h / ==="
+              df -h /
+              echo "=== docker ps -a (helali) ==="
+              docker ps -a --filter name=helali --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+              echo "=== compose ps ==="
+              docker compose -f docker-compose.yml ps 2>/dev/null || true
+              DIAG
               exit 1
             fi
-            echo "Remote rollout attempt ${attempt} failed. Retrying in $((attempt * 10))s..."
+            echo "Remote rollout attempt ${attempt} failed (exit=${status}). Retrying in $((attempt * 10))s..."
             sleep $((attempt * 10))
             attempt=$((attempt + 1))
           done

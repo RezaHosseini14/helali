@@ -61,12 +61,9 @@ services:
       - "${MINIO_CONSOLE_PORT:-9011}:9001"
     volumes:
       - helali_miniodata:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+    # Official minio image is scratch-based (no curl/wget/shell). A curl healthcheck
+    # stays "unhealthy" forever and makes `compose up --wait` fail (deploy then dumps
+    # unrelated Redis scanner logs). Rely on backend retries + restart policy instead.
     networks:
       - helali-net
 
