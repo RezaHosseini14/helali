@@ -608,17 +608,11 @@ jobs:
             status=$?
             if [ "$attempt" -ge "$max" ]; then
               echo "::error::Remote rollout failed after ${max} attempts (last exit=${status}). Scroll up for the first ::error:: in this job — Redis SECURITY ATTACK lines are scanners, not the deploy root cause."
+              # Avoid nested heredocs inside this step (breaks the runner script). Use -c instead.
               # shellcheck disable=SC2086
-              ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" bash -s <<'DIAG' || true
-              set +e
-              cd /opt/helali 2>/dev/null || exit 0
-              echo "=== df -h / ==="
-              df -h /
-              echo "=== docker ps -a (helali) ==="
-              docker ps -a --filter name=helali --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-              echo "=== compose ps ==="
-              docker compose -f docker-compose.yml ps 2>/dev/null || true
-              DIAG
+              ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" \
+                'cd /opt/helali 2>/dev/null || exit 0; echo "=== df -h / ==="; df -h /; echo "=== docker ps -a (helali) ==="; docker ps -a --filter name=helali --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"; echo "=== compose ps ==="; docker compose -f docker-compose.yml ps 2>/dev/null || true' \
+                || true
               exit 1
             fi
             echo "Remote rollout attempt ${attempt} failed (exit=${status}). Retrying in $((attempt * 10))s..."
