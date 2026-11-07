@@ -22,7 +22,8 @@ Remote dir: `/opt/helali`
 
 | Setting | Value |
 |---------|--------|
-| Repo variable `DEPLOY_RUNS_ON` | `["self-hosted","helali"]` — same idea as `zarva` / `safshekan` |
+| Repo variable `DEPLOY_RUNS_ON` | Optional `["self-hosted","helali"]` when a helali runner is online; if unset, deploy uses **`ubuntu-latest` + SSH** (same as a typical green zarva run). If set but no runner is online, CI **falls back** to SSH instead of waiting forever. |
+| Secret `SSH_PRIVATE_KEY` | Same VPS key as zarva — required for SSH deploy |
 | Secret `TLS_HOST` (optional) | `helali.rmhosseini.ir` |
 | Secret `GHCR_PULL_TOKEN` | recommended for private GHCR pull |
 | Secret `SSH_PRIVATE_KEY` | optional fallback for SSH deploy from GitHub-hosted |

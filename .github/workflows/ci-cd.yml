@@ -14,6 +14,7 @@ concurrency:
 permissions:
   contents: read
   packages: write
+  actions: read
 
 env:
   REGISTRY: ghcr.io
@@ -186,14 +187,56 @@ jobs:
             echo "::warning::SSH_PRIVATE_KEY is not configured (and DEPLOY_RUNS_ON is not self-hosted). Skipping production deployment."
           fi
 
+  # When DEPLOY_RUNS_ON asks for self-hosted but no helali runner is online, use ubuntu-latest + SSH
+  # (same deploy steps you see on zarva) instead of queuing forever on "Waiting for a runner".
+  choose-deploy-runner:
+    name: Choose deploy runner (SSH vs self-hosted)
+    needs: [build-backend, build-frontend, preflight]
+    if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      runs_on: ${{ steps.choose.outputs.runs_on }}
+    steps:
+      - name: Prefer ubuntu-latest + SSH when self-hosted runner is absent
+        id: choose
+        env:
+          DEPLOY_RUNS_ON: ${{ vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          UBUNTU='["ubuntu-latest"]'
+          if ! echo "$DEPLOY_RUNS_ON" | grep -q 'self-hosted'; then
+            echo "runs_on=${UBUNTU}" >> "$GITHUB_OUTPUT"
+            echo "--> Deploy runner: ubuntu-latest (SSH, zarva default)"
+            exit 0
+          fi
+          WANTED=$(echo "$DEPLOY_RUNS_ON" | jq -c .)
+          RESP=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100")
+          MATCH=$(echo "$RESP" | jq --argjson want "$WANTED" '
+            [.runners[] | select(.status == "online") |
+              select($want | all(. as $l | any(.labels[]?; .name == $l)))
+            ] | length')
+          if [ "${MATCH:-0}" -ge 1 ]; then
+            echo "runs_on=${WANTED}" >> "$GITHUB_OUTPUT"
+            echo "--> Deploy runner: self-hosted (${MATCH} online)"
+          else
+            echo "runs_on=${UBUNTU}" >> "$GITHUB_OUTPUT"
+            echo "::warning::DEPLOY_RUNS_ON=${DEPLOY_RUNS_ON} but no online helali runner; using ubuntu-latest + SSH like zarva."
+          fi
+
   deploy:
     name: Deploy to Production VPS
-    needs: [build-backend, build-frontend, preflight]
+    needs: [build-backend, build-frontend, preflight, choose-deploy-runner]
     if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
     # Default: GitHub-hosted (SSH into VPS). For IR / firewalled VPS set repo variable:
     #   DEPLOY_RUNS_ON = ["self-hosted","helali"]
     # and register a self-hosted runner on the VPS with labels self-hosted,helali — then deploy runs ON the box (no inbound SSH).
-    runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}
+    runs-on: ${{ fromJSON(needs.choose-deploy-runner.outputs.runs_on) }}
     timeout-minutes: 30
     environment: production
     env:
