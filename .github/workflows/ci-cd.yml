@@ -14,26 +14,16 @@ concurrency:
 permissions:
   contents: read
   packages: write
-  actions: read
 
 env:
   REGISTRY: ghcr.io
   REMOTE_DIR: /opt/helali
-  SSH_FLAGS: >-
-    -o ConnectTimeout=20
-    -o ServerAliveInterval=15
-    -o ServerAliveCountMax=20
-    -o TCPKeepAlive=yes
-    -o StrictHostKeyChecking=accept-new
 
 jobs:
-  # ==========================================
-  # STAGE 1: Quality Gate (npm workspaces)
-  # ==========================================
   validate:
-    name: Quality Gate (Lint & Test)
+    name: Quality Gate (Build, Lint & Test)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
@@ -46,17 +36,17 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit --no-fund
+        run: npm ci
 
       - name: Run Lint
-        run: npm run lint
+        run: npm run lint --if-present
 
       - name: Run Tests
-        run: npm run test
+        run: npm run test --if-present
 
-  # ==========================================
-  # STAGE 2A: Build & Push Backend Image
-  # ==========================================
+      - name: Run Build
+        run: npm run build
+
   build-backend:
     name: Docker Backend (Build & GHCR Push)
     needs: [validate]
@@ -107,12 +97,9 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.ref }}
             ${{ steps.meta.outputs.image }}:latest
-          cache-from: type=gha,scope=helali-backend
-          cache-to: type=gha,mode=max,scope=helali-backend
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
 
-  # ==========================================
-  # STAGE 2B: Build & Push Frontend Image
-  # ==========================================
   build-frontend:
     name: Docker Frontend (Build & GHCR Push)
     needs: [validate]
@@ -171,12 +158,9 @@ jobs:
             MINIO_ENDPOINT=109.70.78.80
             MINIO_PORT=9010
             MINIO_USE_SSL=false
-          cache-from: type=gha,scope=helali-frontend
-          cache-to: type=gha,mode=max,scope=helali-frontend
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
 
-  # ==========================================
-  # STAGE 3A: Deployment Preflight
-  # ==========================================
   preflight:
     name: Deployment Preflight
     needs: [build-backend, build-frontend]
@@ -202,55 +186,15 @@ jobs:
             echo "::warning::SSH_PRIVATE_KEY is not configured (and DEPLOY_RUNS_ON is not self-hosted). Skipping production deployment."
           fi
 
-  # Fail in ~1 min instead of queuing forever when DEPLOY_RUNS_ON asks for self-hosted but no runner is online.
-  check-self-hosted-runner:
-    name: Self-hosted runner online
-    needs: [build-backend, build-frontend, preflight]
-    if: >-
-      github.event_name != 'pull_request' &&
-      needs.preflight.outputs.deploy_enabled == 'true' &&
-      contains(fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]'), 'self-hosted')
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    steps:
-      - name: Verify an online runner matches DEPLOY_RUNS_ON
-        env:
-          DEPLOY_RUNS_ON: ${{ vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]' }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          WANTED=$(echo "$DEPLOY_RUNS_ON" | jq -c .)
-          RESP=$(curl -fsSL \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100")
-          MATCH=$(echo "$RESP" | jq --argjson want "$WANTED" '
-            [.runners[] | select(.status == "online") |
-              select($want | all(. as $l | any(.labels[]?; .name == $l)))
-            ] | length')
-          if [ "${MATCH:-0}" -lt 1 ]; then
-            echo "::error::DEPLOY_RUNS_ON=${DEPLOY_RUNS_ON} but no online repo runner with those labels (stuck job = Waiting for a runner)."
-            echo "::error::Same fix as zarva: on VPS register a self-hosted runner for this repo (labels self-hosted,helali), systemd service, github-runner owns ${REMOTE_DIR:-/opt/helali}."
-            echo "::error::Until then: delete repo variable DEPLOY_RUNS_ON (deploy falls back to ubuntu-latest + SSH) OR finish runner setup — see DEPLOYMENT.md."
-            exit 1
-          fi
-          echo "--> Found ${MATCH} online runner(s) matching ${DEPLOY_RUNS_ON}"
-
-  # ==========================================
-  # STAGE 3B: Production Deployment to Server
-  # ==========================================
   deploy:
     name: Deploy to Production VPS
-    needs: [build-backend, build-frontend, preflight, check-self-hosted-runner]
-    if: >-
-      github.event_name != 'pull_request' &&
-      needs.preflight.outputs.deploy_enabled == 'true' &&
-      (needs.check-self-hosted-runner.result == 'success' || needs.check-self-hosted-runner.result == 'skipped')
-    # Default: GitHub-hosted (SSH). For firewalled VPS set repo variable (same as zarva / saf-shekan):
+    needs: [build-backend, build-frontend, preflight]
+    if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
+    # Default: GitHub-hosted (SSH into VPS). For IR / firewalled VPS set repo variable:
     #   DEPLOY_RUNS_ON = ["self-hosted","helali"]
+    # and register a self-hosted runner on the VPS with labels self-hosted,helali — then deploy runs ON the box (no inbound SSH).
     runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}
-    timeout-minutes: 35
+    timeout-minutes: 30
     environment: production
     env:
       SSH_HOST: ${{ secrets.SSH_HOST || '109.70.78.80' }}
@@ -312,8 +256,10 @@ jobs:
             done
             if [ "$ok" != 1 ]; then
               echo "::error::TCP ${SSH_HOST}:${P} is unreachable from GitHub Actions (timeout)."
-              echo "::error::Fix A (recommended): register self-hosted runner ON the VPS with labels self-hosted,helali and set DEPLOY_RUNS_ON to [\"self-hosted\",\"helali\"] (same pattern as zarva / saf-shekan)."
-              echo "::error::Fix B: open inbound TCP ${P} and set SSH_HOST to the live VPS IP (default 109.70.78.80 if secret is unset)."
+              echo "::error::Your home PC can reach the VPS, but GitHub runners (US/EU) cannot — usually panel firewall / provider geo-block."
+              echo "::error::Fix A (recommended): register a self-hosted runner ON the VPS with labels self-hosted,helali and set repo variable DEPLOY_RUNS_ON to [\"self-hosted\",\"helali\"]."
+              echo "::error::Fix B: open inbound TCP ${P} to 0.0.0.0/0 in the VPS panel firewall (and ufw), then ensure authorized_keys has the helali CI public key."
+              echo "::error::See DEPLOYMENT.md § SSH from GitHub Actions."
               exit 1
             fi
           else
@@ -332,10 +278,20 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan -H -T 20 -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          chmod 600 ~/.ssh/known_hosts 2>/dev/null || true
+          cat <<'EOF' > ~/.ssh/config
+          Host *
+            ServerAliveInterval 15
+            ServerAliveCountMax 20
+            TCPKeepAlive yes
+            ConnectTimeout 30
+            StrictHostKeyChecking accept-new
+          EOF
+          ssh-keyscan -H -T 20 -p "${SSH_PORT:-22}" "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || {
+            echo "WARN: ssh-keyscan failed; host key will be verified via accept-new"
+          }
+          chmod 600 ~/.ssh/known_hosts ~/.ssh/config 2>/dev/null || true
 
-      - name: Sync compose + scripts (SSH)
+      - name: Sync compose + nginx (SSH)
         if: steps.mode.outputs.mode == 'ssh'
         run: |
           set -euo pipefail
@@ -345,14 +301,16 @@ jobs:
             until "$@"; do
               if [ "$attempt" -ge "$max" ]; then
                 echo "::error::Command failed after ${max} attempts: $*"
+                echo "::error::If this is Permission denied: add id_ed25519_helali_ci.pub to ~/.ssh/authorized_keys on the VPS (see DEPLOYMENT.md)."
                 return 1
               fi
+              echo "Attempt ${attempt} failed. Retrying in $((attempt * 5))s..."
               sleep $((attempt * 5))
               attempt=$((attempt + 1))
             done
           }
           # shellcheck disable=SC2086
-          retry ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "mkdir -p $REMOTE_DIR/docker $REMOTE_DIR/data $REMOTE_DIR/docker/certs && chown -R github-runner:github-runner $REMOTE_DIR 2>/dev/null || chown -R 1001:1001 $REMOTE_DIR/data 2>/dev/null || true"
+          retry ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "mkdir -p $REMOTE_DIR/docker $REMOTE_DIR/data $REMOTE_DIR/docker/certs && chown -R 1001:1001 $REMOTE_DIR/data 2>/dev/null || true"
           # shellcheck disable=SC2086
           retry scp $SSH_FLAGS docker-compose.prod.yml "$SSH_USER@$SSH_HOST:$REMOTE_DIR/docker-compose.yml"
           # shellcheck disable=SC2086
@@ -362,41 +320,30 @@ jobs:
           # shellcheck disable=SC2086
           retry ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "chmod +x $REMOTE_DIR/ci-deploy-on-host.sh; test -f $REMOTE_DIR/config.json || printf '{}\n' > $REMOTE_DIR/config.json"
 
-      - name: Sync compose + scripts (local / self-hosted)
+      - name: Sync compose + nginx (local / self-hosted)
         if: steps.mode.outputs.mode == 'local'
         run: |
           set -euo pipefail
-          install_tree() {
-            mkdir -p "$REMOTE_DIR/docker" "$REMOTE_DIR/data" "$REMOTE_DIR/docker/certs"
-            cp docker-compose.prod.yml "$REMOTE_DIR/docker-compose.yml"
-            cp docker/nginx.conf "$REMOTE_DIR/docker/nginx.conf"
-            cp scripts/ci-deploy-on-host.sh "$REMOTE_DIR/ci-deploy-on-host.sh"
-            chmod +x "$REMOTE_DIR/ci-deploy-on-host.sh"
-            test -f "$REMOTE_DIR/config.json" || printf '{}\n' > "$REMOTE_DIR/config.json"
-            chown -R 1001:1001 "$REMOTE_DIR/data" 2>/dev/null || true
-          }
-          if ! install_tree 2>/dev/null; then
-            echo "--> Falling back to sudo for $REMOTE_DIR..."
-            sudo mkdir -p "$REMOTE_DIR/docker" "$REMOTE_DIR/data" "$REMOTE_DIR/docker/certs"
-            sudo cp docker-compose.prod.yml "$REMOTE_DIR/docker-compose.yml"
-            sudo cp docker/nginx.conf "$REMOTE_DIR/docker/nginx.conf"
-            sudo cp scripts/ci-deploy-on-host.sh "$REMOTE_DIR/ci-deploy-on-host.sh"
-            sudo chmod +x "$REMOTE_DIR/ci-deploy-on-host.sh"
-            sudo bash -c "test -f $REMOTE_DIR/config.json || printf '{}\n' > $REMOTE_DIR/config.json"
-            sudo chown -R github-runner:github-runner "$REMOTE_DIR"
-            sudo chown -R 1001:1001 "$REMOTE_DIR/data" 2>/dev/null || true
-          fi
+          mkdir -p "$REMOTE_DIR/docker" "$REMOTE_DIR/data" "$REMOTE_DIR/docker/certs"
+          chown -R 1001:1001 "$REMOTE_DIR/data" 2>/dev/null || true
+          cp docker-compose.prod.yml "$REMOTE_DIR/docker-compose.yml"
+          cp docker/nginx.conf "$REMOTE_DIR/docker/nginx.conf"
+          cp scripts/ci-deploy-on-host.sh "$REMOTE_DIR/ci-deploy-on-host.sh"
+          chmod +x "$REMOTE_DIR/ci-deploy-on-host.sh"
+          test -f "$REMOTE_DIR/config.json" || printf '{}\n' > "$REMOTE_DIR/config.json"
 
       - name: Pull images & rolling restart on server
         env:
           BACKEND_IMAGE: ${{ needs.build-backend.outputs.image_ref }}
           FRONTEND_IMAGE: ${{ needs.build-frontend.outputs.image_ref }}
-          GHCR_USER: ${{ github.actor }}
+          # GHCR login user must match image owner (lowercase); token falls back to GITHUB_TOKEN for self-hosted / CI pull.
+          GHCR_USER: ${{ github.repository_owner }}
           GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN || secrets.GITHUB_TOKEN }}
           DEPLOY_MODE: ${{ steps.mode.outputs.mode }}
         run: |
           set -euo pipefail
           if [ "$DEPLOY_MODE" = "local" ]; then
+            echo "--> Running host deploy script locally in $REMOTE_DIR"
             BACKEND_IMAGE="$BACKEND_IMAGE" FRONTEND_IMAGE="$FRONTEND_IMAGE" \
               GHCR_USER="$GHCR_USER" GHCR_TOKEN="$GHCR_TOKEN" \
               REMOTE_DIR="$REMOTE_DIR" TLS_HOST="$TLS_HOST" \
@@ -418,6 +365,7 @@ jobs:
                 echo "::error::Remote rollout failed after ${max} attempts"
                 exit 1
               fi
+              echo "Remote rollout attempt ${attempt} failed. Retrying in $((attempt * 10))s..."
               sleep $((attempt * 10))
               attempt=$((attempt + 1))
             done
@@ -440,13 +388,15 @@ jobs:
                 missing=1
               fi
             done
+            echo "=== docker ps (helali) ==="
             docker ps -a --filter name=helali --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}'
             if [ "$missing" -ne 0 ]; then
+              echo "::error::App containers are not running — the rolling restart step did not leave a live stack"
               exit 1
             fi
           }
 
-          echo "--> Confirming app containers..."
+          echo "--> Confirming app containers exist on the VPS..."
           if [ "$DEPLOY_MODE" = "local" ]; then
             check_containers
           else
@@ -462,13 +412,16 @@ jobs:
               missing=1
             fi
           done
+          echo "=== docker ps (helali) ==="
           docker ps -a --filter name=helali --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Image}}'
           if [ "$missing" -ne 0 ]; then
+            echo "::error::App containers are not running — the rolling restart step did not leave a live stack"
             exit 1
           fi
           REMOTE
           fi
 
+          # Prefer public domain (host nginx :443); fall back to docker gateway :3032
           HEALTH_URLS=(
             "https://${TLS_HOST}/api/v1/health"
             "https://127.0.0.1/api/v1/health"
@@ -479,7 +432,7 @@ jobs:
             "https://127.0.0.1/"
             "https://127.0.0.1:3032/"
           )
-          echo "Verifying stack (domain ${TLS_HOST}, host nginx, or docker gateway :3032)..."
+          echo "Verifying stack (domain ${TLS_HOST} or local nginx / :3032)..."
           STACK_UP=false
           for i in $(seq 1 40); do
             for idx in 0 1 2; do
@@ -499,24 +452,24 @@ jobs:
           done
 
           if [ "$STACK_UP" = false ]; then
-            echo "::error::Deployment health check failed for ${TLS_HOST}"
+            echo "::error::Deployment health check failed for ${TLS_HOST} (and local :443 / :3032)"
+            echo "=== Container status (best effort) ==="
             if [ "$DEPLOY_MODE" = "local" ]; then
               docker ps -a --filter name=helali || true
-              docker logs helali-backend --tail 60 || true
               docker logs helali-frontend --tail 60 || true
+              docker logs helali-backend --tail 60 || true
+              docker logs helali-nginx --tail 60 || true
             else
               # shellcheck disable=SC2086
               ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "docker ps -a --filter name=helali" || true
+              # shellcheck disable=SC2086
+              ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "docker logs helali-frontend --tail 60" || true
+              # shellcheck disable=SC2086
+              ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "docker logs helali-backend --tail 60" || true
+              # shellcheck disable=SC2086
+              ssh $SSH_FLAGS "$SSH_USER@$SSH_HOST" "docker logs helali-nginx --tail 60" || true
             fi
             exit 1
-          fi
-
-          LOGIN_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://${TLS_HOST}/login" \
-            || curl -k -s -o /dev/null -w "%{http_code}" --connect-timeout 5 "https://127.0.0.1:3032/login" \
-            || echo "000")
-          echo "Post-deploy probe: /login=${LOGIN_CODE}"
-          if [ "$LOGIN_CODE" != "200" ] && [ "$LOGIN_CODE" != "307" ] && [ "$LOGIN_CODE" != "308" ]; then
-            echo "::warning::/login returned ${LOGIN_CODE} (expected 200/307)"
           fi
 
           echo "All services deployed and verified successfully!"
@@ -529,14 +482,15 @@ jobs:
 
           | Component | Status | URL |
           |---|---|---|
-          | **Public site** | Live | [https://${{ env.TLS_HOST }}](https://${{ env.TLS_HOST }}) |
-          | **Health** | Healthy | [https://${{ env.TLS_HOST }}/api/v1/health](https://${{ env.TLS_HOST }}/api/v1/health) |
-          | **Docker gateway** | Ops | \`https://127.0.0.1:3032\` |
+          | **Gateway** | Live | [https://${{ env.TLS_HOST }}](https://${{ env.TLS_HOST }}) |
+          | **Health Check** | Healthy | [https://${{ env.TLS_HOST }}/api/v1/health](https://${{ env.TLS_HOST }}/api/v1/health) |
+          | **Swagger** | Ready | [https://${{ env.TLS_HOST }}/api/docs](https://${{ env.TLS_HOST }}/api/docs) |
 
           - **Git SHA**: \`${{ github.sha }}\`
           - **Triggered By**: @${{ github.actor }}
-          - **Target VPS**: \`${{ env.SSH_HOST }}\` (\`/opt/helali\`)
-          - **Host nginx**: \`https://${{ env.TLS_HOST }}\` → backend \`:3030\`, frontend \`:3031\`
+          - **Target VPS (SSH)**: \`${{ env.SSH_USER }}@${{ env.SSH_HOST }}:${{ env.SSH_PORT }}\` — **public URL host**: \`${{ env.TLS_HOST }}\` (\`/opt/helali\`)
+          - **Gateway**: nginx on \`:3032\` → backend \`/api\`+\`/socket.io\`, frontend \`/\`
+          - **Direct ports**: backend \`:3030\`, frontend \`:3031\`
           - **Backend Image**: \`${{ needs.build-backend.outputs.image_ref }}\`
           - **Frontend Image**: \`${{ needs.build-frontend.outputs.image_ref }}\`
           EOF
