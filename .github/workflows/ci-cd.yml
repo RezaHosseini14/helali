@@ -190,8 +190,7 @@ jobs:
     name: Deploy to Production VPS
     needs: [build-backend, build-frontend, preflight]
     if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
-    # zarva-vps uses DEPLOY_RUNS_ON self-hosted; helali runner not registered yet — force ubuntu + SSH until helali-vps exists (then switch back to vars.DEPLOY_RUNS_ON).
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}
     timeout-minutes: 30
     environment: production
     env:

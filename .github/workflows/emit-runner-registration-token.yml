@@ -1,0 +1,30 @@
+name: (setup) Emit helali runner registration token
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  token:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Create registration token (for VPS config.sh)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TOKEN=$(curl -fsSL -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runners/registration-token" \
+            | jq -r '.token')
+          test -n "$TOKEN" && test "$TOKEN" != null
+          echo "::add-mask::${TOKEN}"
+          echo "Copy this token within 60 minutes, then on VPS:"
+          echo "  cd /opt/actions-runner-helali && ./config.sh --url https://github.com/${GITHUB_REPOSITORY} --token TOKEN --labels self-hosted,helali --name helali-vps --unattended"
+          echo "token=${TOKEN}" >> "$GITHUB_STEP_SUMMARY"
+          echo "$TOKEN"
