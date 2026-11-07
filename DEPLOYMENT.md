@@ -50,11 +50,23 @@ export TLS_HOST=helali.rmhosseini.ir
 bash ci-deploy-on-host.sh
 ```
 
+## Default admin (after seed)
+
+Deploy runs `apps/backend/prisma/seed-prod.cjs` after migrations. First boot creates:
+
+- **username:** `admin`
+- **password:** `admin123`
+
+Change the password after first login. Re-deploy does **not** reset an existing admin password.
+
 ## Verify
 
 ```bash
 curl -fsS https://helali.rmhosseini.ir/api/v1/health
 curl -kfsS https://127.0.0.1:3032/api/v1/health
+curl -sk -X POST https://127.0.0.1:3032/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin123"}'
 ```
 
 ## Rollback

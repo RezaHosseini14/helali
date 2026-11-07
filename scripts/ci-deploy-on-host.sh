@@ -154,6 +154,13 @@ if ! docker compose -f docker-compose.yml run --rm --no-deps backend \
   exit 1
 fi
 
+echo "--> Seeding roles/permissions/admin (idempotent)..."
+if ! docker compose -f docker-compose.yml run --rm --no-deps backend \
+  node apps/backend/prisma/seed-prod.cjs; then
+  echo "::error::Database seed failed! Halting deployment."
+  exit 1
+fi
+
 up_one() {
   local service="$1"
   local timeout="$2"
