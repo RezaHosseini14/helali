@@ -9,12 +9,12 @@ on:
 
 concurrency:
   group: helali-${{ github.workflow }}-${{ github.ref }}
-  # Do not queue behind a stuck Deploy (e.g. "Waiting for runner"); cancel stale push/PR runs.
-  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
   packages: write
+  actions: read
 
 env:
   REGISTRY: ghcr.io
@@ -202,13 +202,51 @@ jobs:
             echo "::warning::SSH_PRIVATE_KEY is not configured (and DEPLOY_RUNS_ON is not self-hosted). Skipping production deployment."
           fi
 
+  # Fail in ~1 min instead of queuing forever when DEPLOY_RUNS_ON asks for self-hosted but no runner is online.
+  check-self-hosted-runner:
+    name: Self-hosted runner online
+    needs: [build-backend, build-frontend, preflight]
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.preflight.outputs.deploy_enabled == 'true' &&
+      contains(fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]'), 'self-hosted')
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify an online runner matches DEPLOY_RUNS_ON
+        env:
+          DEPLOY_RUNS_ON: ${{ vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]' }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          WANTED=$(echo "$DEPLOY_RUNS_ON" | jq -c .)
+          RESP=$(curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100")
+          MATCH=$(echo "$RESP" | jq --argjson want "$WANTED" '
+            [.runners[] | select(.status == "online") |
+              select($want | all(. as $l | any(.labels[]?; .name == $l)))
+            ] | length')
+          if [ "${MATCH:-0}" -lt 1 ]; then
+            echo "::error::DEPLOY_RUNS_ON=${DEPLOY_RUNS_ON} but no online repo runner with those labels (stuck job = Waiting for a runner)."
+            echo "::error::Same fix as zarva: on VPS register a self-hosted runner for this repo (labels self-hosted,helali), systemd service, github-runner owns ${REMOTE_DIR:-/opt/helali}."
+            echo "::error::Until then: delete repo variable DEPLOY_RUNS_ON (deploy falls back to ubuntu-latest + SSH) OR finish runner setup — see DEPLOYMENT.md."
+            exit 1
+          fi
+          echo "--> Found ${MATCH} online runner(s) matching ${DEPLOY_RUNS_ON}"
+
   # ==========================================
   # STAGE 3B: Production Deployment to Server
   # ==========================================
   deploy:
     name: Deploy to Production VPS
-    needs: [build-backend, build-frontend, preflight]
-    if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
+    needs: [build-backend, build-frontend, preflight, check-self-hosted-runner]
+    if: >-
+      github.event_name != 'pull_request' &&
+      needs.preflight.outputs.deploy_enabled == 'true' &&
+      (needs.check-self-hosted-runner.result == 'success' || needs.check-self-hosted-runner.result == 'skipped')
     # Default: GitHub-hosted (SSH). For firewalled VPS set repo variable (same as zarva / saf-shekan):
     #   DEPLOY_RUNS_ON = ["self-hosted","helali"]
     runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}
