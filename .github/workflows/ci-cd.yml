@@ -181,53 +181,18 @@ jobs:
           if [ -n "${SSH_PRIVATE_KEY}" ] || echo "${DEPLOY_RUNS_ON:-}" | grep -q 'self-hosted'; then
             echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
             echo "Deployment credentials / self-hosted runner config detected."
+            if echo "${DEPLOY_RUNS_ON:-}" | grep -q 'helali'; then
+              echo "::notice::Deploy expects a self-hosted runner with label helali on the VPS. If the job waits, register it: docs/CI-GITHUB-FIX.md"
+            fi
           else
             echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
             echo "::warning::SSH_PRIVATE_KEY is not configured (and DEPLOY_RUNS_ON is not self-hosted). Skipping production deployment."
           fi
 
-  check-self-hosted-runner:
-    name: Check helali runner online
-    needs: [preflight]
-    if: >-
-      github.event_name != 'pull_request' &&
-      needs.preflight.outputs.deploy_enabled == 'true' &&
-      contains(vars.DEPLOY_RUNS_ON, 'helali')
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    permissions:
-      actions: read
-
-    steps:
-      - name: Fail fast if no online runner with label helali
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          RESP=$(curl -fsSL \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100")
-          ONLINE=$(echo "$RESP" | jq '[.runners[] | select(.status=="online") | select(any(.labels[]?; .name=="helali"))] | length')
-          TOTAL=$(echo "$RESP" | jq '[.runners[] | select(any(.labels[]?; .name=="helali"))] | length')
-          if [ "$ONLINE" -ge 1 ]; then
-            echo "helali runner online (${ONLINE}/${TOTAL} with label helali)."
-            exit 0
-          fi
-          echo "::error::No online self-hosted runner with label \"helali\" (registered: ${TOTAL}). Deploy would hang or fall back to SSH (GitHub-hosted runners cannot reach this VPS)."
-          echo "::error::1) Actions → run workflow \"(setup) Emit helali runner registration token\" → copy token from job summary."
-          echo "::error::2) On VPS: REGISTRATION_TOKEN='<token>' bash /opt/helali/scripts/register-self-hosted-runner-helali.sh"
-          echo "::error::3) Re-run this CI/CD workflow. See docs/CI-GITHUB-FIX.md"
-          exit 1
-
   deploy:
     name: Deploy to Production VPS
-    needs: [build-backend, build-frontend, preflight, check-self-hosted-runner]
-    if: >-
-      github.event_name != 'pull_request' &&
-      needs.preflight.outputs.deploy_enabled == 'true' &&
-      (needs.check-self-hosted-runner.result == 'success' || needs.check-self-hosted-runner.result == 'skipped')
+    needs: [build-backend, build-frontend, preflight]
+    if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
     runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}
     timeout-minutes: 30
     environment: production

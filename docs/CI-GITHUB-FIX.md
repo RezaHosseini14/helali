@@ -23,7 +23,7 @@ REGISTRATION_TOKEN='…' bash /opt/helali/scripts/register-self-hosted-runner-he
 5. متغیر repo: `DEPLOY_RUNS_ON` = `["self-hosted","helali"]` (همان zarva)
 6. **Re-run** آخرین CI/CD روی `main` — deploy باید **LOCAL** روی helali-vps باشد (نه SSH از ubuntu).
 
-اگر رانر نباشد، job جدید **Check helali runner online** با پیام واضح fail می‌کند؛ دیگر timeout SSH از GitHub یا صف بی‌نهایت runner.
+اگر رانر نباشد، job **Deploy** در حالت **Waiting for a runner with label helali** می‌ماند (تا timeout). API چک رانر از workflow با `GITHUB_TOKEN` در این repo 403 می‌گیرد؛ ثبت رانر الزامی است.
 
 ---
 
