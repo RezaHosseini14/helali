@@ -7,9 +7,10 @@ REPO="RezaHosseini14/helali"
 LABELS="self-hosted,helali"
 RUNNER_USER="${RUNNER_USER:-github-runner}"
 
-if [[ -z "${GITHUB_RUNNER_TOKEN:-}" ]]; then
-  echo "Export GITHUB_RUNNER_TOKEN from GitHub:"
-  echo "  $REPO → Settings → Actions → Runners → New self-hosted runner → token"
+REGISTRATION_TOKEN="${REGISTRATION_TOKEN:-${GITHUB_RUNNER_TOKEN:-}}"
+if [[ -z "$REGISTRATION_TOKEN" ]]; then
+  echo "Usage: REGISTRATION_TOKEN='<token>' bash $0"
+  echo "Or run GitHub Actions workflow \"(setup) Emit helali runner registration token\" and copy from job summary."
   exit 1
 fi
 
@@ -30,7 +31,7 @@ fi
 ./config.sh remove --unattended 2>/dev/null || true
 ./config.sh \
   --url "https://github.com/${REPO}" \
-  --token "$GITHUB_RUNNER_TOKEN" \
+  --token "$REGISTRATION_TOKEN" \
   --unattended \
   --labels "$LABELS" \
   --name "helali-vps"

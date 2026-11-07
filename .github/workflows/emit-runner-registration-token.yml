@@ -24,7 +24,16 @@ jobs:
             | jq -r '.token')
           test -n "$TOKEN" && test "$TOKEN" != null
           echo "::add-mask::${TOKEN}"
-          echo "Copy this token within 60 minutes, then on VPS:"
-          echo "  cd /opt/actions-runner-helali && ./config.sh --url https://github.com/${GITHUB_REPOSITORY} --token TOKEN --labels self-hosted,helali --name helali-vps --unattended"
-          echo "token=${TOKEN}" >> "$GITHUB_STEP_SUMMARY"
-          echo "$TOKEN"
+          {
+            echo "## helali runner registration token (expires ~1h)"
+            echo ""
+            echo '```'
+            echo "$TOKEN"
+            echo '```'
+            echo ""
+            echo "On VPS as **root**:"
+            echo '```bash'
+            echo "REGISTRATION_TOKEN='${TOKEN}' bash /opt/helali/scripts/register-self-hosted-runner-helali.sh"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::add-mask::${TOKEN}"

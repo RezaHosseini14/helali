@@ -11,23 +11,19 @@
 
 ## مسیر A — مثل zarva (توصیه): رانر helali روی VPS
 
-1. از سیستم خودت SSH به `root@109.70.78.80`.
-2. GitHub → **RezaHosseini14/helali** → **Settings → Actions → Runners → New self-hosted runner** → توکن را کپی کن.
-3. روی VPS:
+1. GitHub → **RezaHosseini14/helali** → **Actions** → workflow **(setup) Emit helali runner registration token** → **Run workflow** → در Job Summary توکن را کپی کن (یا از Settings → Runners → New).
+2. SSH به VPS: `ssh root@109.70.78.80`
+3. روی VPS (پوشهٔ رانر از zarva همگام شده در `/opt/actions-runner-helali`):
 
 ```bash
-export GITHUB_RUNNER_TOKEN='…'
-curl -fsSL -o /tmp/register.sh "https://raw.githubusercontent.com/RezaHosseini14/helali/main/scripts/register-helali-runner-on-vps.sh"
-bash /tmp/register.sh
+REGISTRATION_TOKEN='…' bash /opt/helali/scripts/register-self-hosted-runner-helali.sh
 ```
 
-یا بعد از `git pull` در کلون محلی: `bash /opt/helali/scripts/register-helali-runner-on-vps.sh`
+4. تأیید: `systemctl status 'actions.runner.*helali*'`
+5. متغیر repo: `DEPLOY_RUNS_ON` = `["self-hosted","helali"]` (همان zarva)
+6. **Re-run** آخرین CI/CD روی `main` — deploy باید **LOCAL** روی helali-vps باشد (نه SSH از ubuntu).
 
-4. در `ci-cd.yml` خط deploy را برگردان به (مثل zarva):
-
-`runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}`
-
-5. push → deploy باید روی **helali-vps** با همان استپ‌های LOCAL برود.
+اگر رانر نباشد، job جدید **Check helali runner online** با پیام واضح fail می‌کند؛ دیگر timeout SSH از GitHub یا صف بی‌نهایت runner.
 
 ---
 
