@@ -22,34 +22,14 @@ Remote dir: `/opt/helali`
 
 | Setting | Value |
 |---------|--------|
-| Repo variable `DEPLOY_RUNS_ON` | `["self-hosted","helali"]` (workflow default if unset) |
+| Repo variable `DEPLOY_RUNS_ON` | `["self-hosted","helali"]` — same idea as `zarva` / `safshekan` |
 | Secret `TLS_HOST` (optional) | `helali.rmhosseini.ir` |
 | Secret `GHCR_PULL_TOKEN` | recommended for private GHCR pull |
-| Secret `SSH_PRIVATE_KEY` | **not recommended** — GitHub-hosted runners usually cannot SSH to IR VPS (timeout) |
+| Secret `SSH_PRIVATE_KEY` | optional fallback for SSH deploy from GitHub-hosted |
 
-Self-hosted runner label: `helali` (alongside `zarva` / `safshekan` on the same VPS).
+Self-hosted runner on the same VPS as zarva/saf-shekan: labels **`self-hosted`**, **`helali`** (each repo has its own runner registration — copy what you did for `zarva-vps`).
 
-### SSH timeout from GitHub Actions
-
-If deploy fails with `ssh: connect to host … Connection timed out`, GitHub’s cloud runners cannot reach your VPS SSH port (panel firewall / geo-block). Your PC may still SSH fine.
-
-1. Register the **helali** runner on `109.70.78.80` (see below) — deploy runs **on the VPS**, no inbound SSH.
-2. Optionally remove `SSH_PRIVATE_KEY` from repo secrets so preflight does not imply SSH deploy.
-3. Ensure secret `SSH_HOST` is not an old IP; local deploy ignores SSH.
-
-## Self-hosted runner (one-time)
-
-1. GitHub → **RezaHosseini14/helali** → Settings → Actions → Runners → **New self-hosted runner** (Linux x64). Copy the registration token.
-2. On the VPS:
-
-```bash
-REGISTRATION_TOKEN='…' bash /opt/helali/scripts/register-self-hosted-runner-helali.sh
-# or after next CI sync:
-REGISTRATION_TOKEN='…' bash scripts/register-self-hosted-runner-helali.sh
-```
-
-3. Repo variable **`DEPLOY_RUNS_ON`** = `["self-hosted","helali"]` (optional; workflow defaults to this).
-4. Re-run **helali CI/CD Pipeline** on `main`.
+اگر GitHub نتواند به VPS SSH بزند: runner روی VPS + `DEPLOY_RUNS_ON=["self-hosted","helali"]` (مثل زروا و صف‌شکن).
 
 ## First-time host nginx + cert
 

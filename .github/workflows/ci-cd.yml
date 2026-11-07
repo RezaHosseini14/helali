@@ -193,18 +193,12 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           DEPLOY_RUNS_ON: ${{ vars.DEPLOY_RUNS_ON }}
         run: |
-          if echo "${DEPLOY_RUNS_ON:-}" | grep -q 'self-hosted'; then
+          if [ -n "${SSH_PRIVATE_KEY}" ] || echo "${DEPLOY_RUNS_ON:-}" | grep -q 'self-hosted'; then
             echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "Self-hosted runner (DEPLOY_RUNS_ON) — deploy on VPS, no inbound SSH."
-          elif [ -z "${DEPLOY_RUNS_ON:-}" ]; then
-            echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "DEPLOY_RUNS_ON unset — default is self-hosted runner label helali on the VPS."
-          elif [ -n "${SSH_PRIVATE_KEY}" ]; then
-            echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
-            echo "SSH_PRIVATE_KEY set — deploy via SSH from GitHub-hosted (often blocked on IR VPS)."
+            echo "Deployment credentials / self-hosted runner config detected."
           else
             echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Set DEPLOY_RUNS_ON to [\"self-hosted\",\"helali\"] or configure SSH_PRIVATE_KEY."
+            echo "::warning::SSH_PRIVATE_KEY is not configured (and DEPLOY_RUNS_ON is not self-hosted). Skipping production deployment."
           fi
 
   # ==========================================
@@ -214,8 +208,9 @@ jobs:
     name: Deploy to Production VPS
     needs: [build-backend, build-frontend, preflight]
     if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
-    # Default: runner ON the VPS (no GitHub→VPS SSH). Override with ["ubuntu-latest"] only if SSH is open globally.
-    runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["self-hosted","helali"]') }}
+    # Default: GitHub-hosted (SSH). For firewalled VPS set repo variable (same as zarva / saf-shekan):
+    #   DEPLOY_RUNS_ON = ["self-hosted","helali"]
+    runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}
     timeout-minutes: 35
     environment: production
     env:
@@ -278,9 +273,8 @@ jobs:
             done
             if [ "$ok" != 1 ]; then
               echo "::error::TCP ${SSH_HOST}:${P} is unreachable from GitHub Actions (timeout)."
-              echo "::error::Fix A (recommended): register self-hosted runner on the VPS (label helali) — scripts/register-self-hosted-runner-helali.sh"
-              echo "::error::Fix B: set repo variable DEPLOY_RUNS_ON to [\"self-hosted\",\"helali\"] and leave SSH unset for deploy."
-              echo "::error::Fix C: open inbound TCP ${P} to GitHub runner IPs (often impractical on IR VPS)."
+              echo "::error::Fix A (recommended): register self-hosted runner ON the VPS with labels self-hosted,helali and set DEPLOY_RUNS_ON to [\"self-hosted\",\"helali\"] (same pattern as zarva / saf-shekan)."
+              echo "::error::Fix B: open inbound TCP ${P} and set SSH_HOST to the live VPS IP (default 109.70.78.80 if secret is unset)."
               exit 1
             fi
           else
