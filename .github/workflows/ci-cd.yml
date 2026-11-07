@@ -190,7 +190,7 @@ jobs:
     name: Deploy to Production VPS
     needs: [build-backend, build-frontend, preflight]
     if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
-    # Same as a green zarva run: GitHub-hosted runner + SSH into VPS (ignores DEPLOY_RUNS_ON until helali self-hosted runner exists).
+    # zarva-vps uses DEPLOY_RUNS_ON self-hosted; helali runner not registered yet — force ubuntu + SSH until helali-vps exists (then switch back to vars.DEPLOY_RUNS_ON).
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
