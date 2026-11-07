@@ -29,13 +29,7 @@ Remote dir: `/opt/helali`
 
 Self-hosted runner on the same VPS as zarva/saf-shekan: labels **`self-hosted`**, **`helali`** (each repo has its own runner registration — copy what you did for `zarva-vps`).
 
-اگر GitHub نتواند به VPS SSH بزند: runner روی VPS + `DEPLOY_RUNS_ON=["self-hosted","helali"]` (مثل زروا و صف‌شکن).
-
-### ثبت runner بدون SSH از PC
-
-1. [helali → New self-hosted runner](https://github.com/RezaHosseini14/helali/settings/actions/runners/new) — توکن ثبت را کپی کن.
-2. [zarva → VPS bootstrap helali runner](https://github.com/RezaHosseini14/zarva/actions/workflows/vps-bootstrap-helali-runner.yml) → Run workflow → توکن را بچسبان (job روی **zarva-vps** اجرا می‌شود).
-3. helali → Variables → `DEPLOY_RUNS_ON` = `["self-hosted","helali"]`
+اگر GitHub نتواند به VPS SSH بزند: runner روی VPS + `DEPLOY_RUNS_ON=["self-hosted","helali"]` (مثل زروا و صف‌شکن). ثبت runner: همان مراحل **Settings → Runners → New** در ریپو helali و `config.sh` روی VPS در `/opt/actions-runner-helali` (کپی الگوی زروا).
 
 ## First-time host nginx + cert
 
