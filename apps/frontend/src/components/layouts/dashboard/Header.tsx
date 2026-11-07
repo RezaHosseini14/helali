@@ -3,11 +3,9 @@
 import { Icon } from '@iconify/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 
-import ChangelogModal from '@/components/layouts/dashboard/ChangelogModal';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { authKeys, useCurrentUser } from '@/features/auth/hooks/use-current-user';
@@ -16,13 +14,16 @@ import { TOGGLE_DARK_MODE, TOGGLE_SIDEBAR } from '@/redux/slices/styleSlice';
 import type { RootState } from '@/redux/store';
 import { getApiErrorMessage } from '@/services/get-api-error-message';
 
-function Header() {
+interface IHeaderProps {
+  readonly onOpenChangelog: () => void;
+}
+
+function Header({ onOpenChangelog }: IHeaderProps) {
   const dispatch = useDispatch();
   const { darkMode } = useSelector((state: RootState) => state.style);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: user } = useCurrentUser();
-  const [changelogOpen, setChangelogOpen] = useState(false);
 
   const { mutateAsync: logoutMutate, isPending: isLoggingOut } = useMutation({
     mutationFn: logout,
@@ -134,9 +135,7 @@ function Header() {
                 <Button
                   variant="ghost"
                   className="flex h-full w-full items-center justify-between px-3 py-2"
-                  onClick={() => {
-                    setChangelogOpen(true);
-                  }}
+                  onClick={onOpenChangelog}
                 >
                   <span>تغییرات نسخه</span>
                   <Icon icon="solar:document-text-bold-duotone" fontSize={22} />
@@ -161,7 +160,6 @@ function Header() {
         </div>
       </div>
 
-      <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </header>
   );
 }

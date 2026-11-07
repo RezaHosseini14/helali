@@ -14,8 +14,15 @@ echo "--> Deploy host: $(hostname) pwd=$(pwd)"
 echo "--> Compose ports (must include 3030/3031/3032):"
 grep -nE 'ports:|3030|3031|3032|BACKEND_PORT|FRONTEND_PORT|NGINX_PORT' docker-compose.yml || true
 
-if [ -n "${GHCR_TOKEN:-}" ]; then
-  echo "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-}" --password-stdin
+if [ -z "${GHCR_TOKEN:-}" ]; then
+  echo "::error::GHCR_TOKEN is empty — cannot pull private images from ghcr.io."
+  echo "::error::Add repo secret GHCR_PULL_TOKEN (classic PAT with read:packages) or ensure the deploy job passes GITHUB_TOKEN."
+  exit 1
+fi
+GHCR_LOGIN_USER="$(echo "${GHCR_USER:-}" | tr '[:upper:]' '[:lower:]')"
+if ! echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_LOGIN_USER" --password-stdin; then
+  echo "::error::docker login ghcr.io failed (check GHCR_PULL_TOKEN or package access for ${GHCR_LOGIN_USER})."
+  exit 1
 fi
 
 touch .env
@@ -31,7 +38,7 @@ else
   echo "FRONTEND_IMAGE=${FRONTEND_IMAGE}" >> .env
 fi
 
-for kv in BACKEND_PORT=3030 FRONTEND_PORT=3031 NGINX_PORT=3032; do
+for kv in BACKEND_PORT=3030 FRONTEND_PORT=3031 NGINX_PORT=3032 MINIO_PUBLIC_PORT=9010; do
   key=${kv%%=*}; val=${kv#*=}
   if grep -q "^${key}=" .env; then
     sed -i "s|^${key}=.*|${key}=${val}|" .env
@@ -78,6 +85,13 @@ fi
 if ! grep -q '^JWT_REFRESH_SECRET=.\+' .env; then
   sed -i '/^JWT_REFRESH_SECRET=/d' .env || true
   echo "JWT_REFRESH_SECRET=$(openssl rand -base64 48)" >> .env
+fi
+if ! grep -q '^MINIO_ACCESS_KEY=' .env; then
+  echo "MINIO_ACCESS_KEY=minio99" >> .env
+fi
+if ! grep -q '^MINIO_SECRET_KEY=.\+' .env; then
+  sed -i '/^MINIO_SECRET_KEY=/d' .env || true
+  echo "MINIO_SECRET_KEY=$(openssl rand -hex 24)" >> .env
 fi
 
 sed -i '/^API_IMAGE=/d;/^WEB_IMAGE=/d' .env || true
@@ -250,5 +264,6 @@ if [ "$reloaded" != 1 ]; then
   exit 1
 fi
 
+echo "--> Cleaning up unused dangling images..."
 docker image prune -f || true
-echo "HOST_DEPLOY_OK"
+echo "--> Host deploy finished OK"

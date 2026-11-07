@@ -181,9 +181,6 @@ jobs:
           if [ -n "${SSH_PRIVATE_KEY}" ] || echo "${DEPLOY_RUNS_ON:-}" | grep -q 'self-hosted'; then
             echo "deploy_enabled=true" >> "$GITHUB_OUTPUT"
             echo "Deployment credentials / self-hosted runner config detected."
-            if echo "${DEPLOY_RUNS_ON:-}" | grep -q 'helali'; then
-              echo "::notice::Deploy expects a self-hosted runner with label helali on the VPS. If the job waits, register it: docs/CI-GITHUB-FIX.md"
-            fi
           else
             echo "deploy_enabled=false" >> "$GITHUB_OUTPUT"
             echo "::warning::SSH_PRIVATE_KEY is not configured (and DEPLOY_RUNS_ON is not self-hosted). Skipping production deployment."
@@ -193,6 +190,9 @@ jobs:
     name: Deploy to Production VPS
     needs: [build-backend, build-frontend, preflight]
     if: github.event_name != 'pull_request' && needs.preflight.outputs.deploy_enabled == 'true'
+    # Default: GitHub-hosted (SSH into VPS). For IR / firewalled VPS set repo variable:
+    #   DEPLOY_RUNS_ON = ["self-hosted","helali"]
+    # and register a runner on the VPS with labels self-hosted,helali — then deploy runs ON the box (no inbound SSH).
     runs-on: ${{ fromJSON(vars.DEPLOY_RUNS_ON || '["ubuntu-latest"]') }}
     timeout-minutes: 30
     environment: production

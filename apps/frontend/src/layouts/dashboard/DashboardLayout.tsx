@@ -1,9 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
+import ChangelogModal from '@/components/layouts/dashboard/ChangelogModal';
 import Header from '@/components/layouts/dashboard/Header';
 import Sidebar from '@/components/layouts/dashboard/Sidebar';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,7 @@ import type { RootState } from '@/redux/store';
 function DashboardLayout({ children }: { children: ReactNode }) {
   const dispatch = useDispatch();
   const { sidebarStatus } = useSelector((state: RootState) => state.style);
+  const [changelogOpen, setChangelogOpen] = useState(false);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1023px)');
@@ -44,7 +46,7 @@ function DashboardLayout({ children }: { children: ReactNode }) {
         />
       ) : null}
 
-      <Sidebar />
+      <Sidebar onOpenChangelog={() => setChangelogOpen(true)} />
 
       <div
         className={cn(
@@ -52,9 +54,11 @@ function DashboardLayout({ children }: { children: ReactNode }) {
           sidebarStatus ? 'lg:ms-80' : 'lg:ms-24',
         )}
       >
-        <Header />
+        <Header onOpenChangelog={() => setChangelogOpen(true)} />
         <div className="min-w-0 flex-1 pb-2">{children}</div>
       </div>
+
+      <ChangelogModal open={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </div>
   );
 }

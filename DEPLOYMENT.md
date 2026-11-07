@@ -18,25 +18,41 @@ Remote dir: `/opt/helali`
 - DNS: `A` `helali` → `109.70.78.80` (proxied)
 - SSL mode: **Full (strict)** after certbot on the VPS
 
-## GitHub Actions
+## Secrets
 
-| Setting | Value |
-|---------|--------|
-| Repo variable `DEPLOY_RUNS_ON` | Optional `["self-hosted","helali"]` when a helali runner is online; if unset, deploy uses **`ubuntu-latest` + SSH** (same as a typical green zarva run). If set but no runner is online, CI **falls back** to SSH instead of waiting forever. |
-| Secret `SSH_PRIVATE_KEY` | Same VPS key as zarva — required for SSH deploy |
-| Secret `TLS_HOST` (optional) | `helali.rmhosseini.ir` |
-| Secret `GHCR_PULL_TOKEN` | recommended for private GHCR pull |
-| Secret `SSH_PRIVATE_KEY` | optional fallback for SSH deploy from GitHub-hosted |
+| Name | Required | Notes |
+|------|----------|--------|
+| `SSH_PRIVATE_KEY` | SSH deploy only | Same key as zarva (`id_ed25519_zarva_ci`) if you use GitHub-hosted + SSH |
+| `SSH_HOST` | SSH deploy | Default `109.70.78.80` in workflow |
+| `SSH_USER` | SSH deploy | e.g. `root` |
+| `GHCR_PULL_TOKEN` | optional | PAT `read:packages`; CI falls back to `GITHUB_TOKEN` on the self-hosted runner |
+| `SSH_PORT` | no | Default **22** |
+| `TLS_HOST` | no | `helali.rmhosseini.ir` |
 
-## Self-hosted runner (same as zarva — required when `DEPLOY_RUNS_ON` is set)
+### Repo variable (self-hosted — same as zarva)
 
-1. GitHub **RezaHosseini14/helali** → **Settings → Actions → Runners → New self-hosted runner** (Linux x64).  
-2. On VPS `109.70.78.80`: use a **second** install dir (zarva already uses `/opt/actions-runner`): e.g. `/opt/actions-runner-helali`, run the printed `./config.sh --url https://github.com/RezaHosseini14/helali --token …` with labels **`self-hosted`**, **`helali`**.  
-3. `./svc.sh install` + `./svc.sh start` (user `github-runner` or same as zarva).  
-4. Repo **Settings → Variables → Actions**: `DEPLOY_RUNS_ON` = `["self-hosted","helali"]` (mirror zarva’s `["self-hosted","zarva"]`).  
-5. Ensure `/opt/helali` exists and the runner user can run Docker; re-run CI.
+| Name | Value |
+|------|--------|
+| `DEPLOY_RUNS_ON` | `["self-hosted","helali"]` |
 
-Until step 2–3 are done, deploy jobs show **Waiting for a runner** — zarva does not, because `zarva-vps` is already online.
+When set, **Deploy** runs on the VPS runner (SSH steps skipped). Builds still use `ubuntu-latest`.
+
+## Self-hosted runner (mirrors zarva `zarva-vps`)
+
+1. Repo variable: `DEPLOY_RUNS_ON` = `["self-hosted","helali"]` (zarva uses `["self-hosted","zarva"]`).  
+2. Actions → **(setup) Emit helali runner registration token** → copy token from job summary.  
+3. On VPS (second install dir; zarva uses `/opt/actions-runner`, helali uses `/opt/actions-runner-helali`):
+
+```bash
+REGISTRATION_TOKEN='<token>' bash /opt/helali/scripts/register-self-hosted-runner-helali.sh
+```
+
+4. Confirm: Settings → Actions → Runners shows **helali-vps** (labels `self-hosted`, `helali`).  
+5. Re-run **helali CI/CD Pipeline** on `main` — deploy log should show **LOCAL** and skip SSH (like zarva).
+
+Until the runner is online, deploy stays **Waiting for a runner**. There is no automatic SSH fallback when `DEPLOY_RUNS_ON` is set.
+
+Local helper: `powershell -File scripts/print-vps-bootstrap.ps1`
 
 ## First-time host nginx + cert
 

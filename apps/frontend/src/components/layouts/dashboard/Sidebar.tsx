@@ -113,7 +113,11 @@ function readExpandedMenuIndex(itemCount: number): number {
   return parsed;
 }
 
-function Sidebar() {
+interface ISidebarProps {
+  readonly onOpenChangelog: () => void;
+}
+
+function Sidebar({ onOpenChangelog }: ISidebarProps) {
   const ability = useAppAbility();
   const dispatch = useDispatch();
   const { sidebarStatus } = useSelector((state: RootState) => state.style);
@@ -209,13 +213,15 @@ function Sidebar() {
           })}
         </div>
 
-        <p
-          className="mt-auto shrink-0 px-1 pb-1 text-center text-[10px] font-medium leading-tight text-muted-foreground"
-          title={`نسخه ${APP_VERSION}`}
-          aria-label={`نسخه ${APP_VERSION}`}
+        <button
+          type="button"
+          className="mt-auto shrink-0 rounded-lg px-1 pb-1 text-center text-[10px] font-medium leading-tight text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title="مشاهده تغییرات نسخه"
+          aria-label={`نسخه ${APP_VERSION} — مشاهده تغییرات`}
+          onClick={onOpenChangelog}
         >
           v{APP_VERSION}
-        </p>
+        </button>
       </div>
 
       <div
@@ -272,12 +278,6 @@ function Sidebar() {
             <p className="px-2 text-sm text-muted-foreground">زیرمنویی موجود نیست</p>
           )}
         </div>
-
-        {isExpanded ? (
-          <p className="mt-auto shrink-0 truncate border-t border-border px-2 pt-3 text-xs text-muted-foreground">
-            نسخه {APP_VERSION}
-          </p>
-        ) : null}
       </div>
     </aside>
   );
