@@ -1,51 +1,62 @@
 # Deploy — helali
 
-SafShekan-style stack: nginx gateway + backend + frontend + postgres + redis + minio.
+SafShekan/ZARVA-style stack on **109.70.78.80**: host nginx + Let's Encrypt for `helali.rmhosseini.ir`, docker gateway on **3032**, app ports **3030/3031**.
 
 | Service | Host | Container |
 |---------|------|-----------|
-| nginx | `3032` | `helali-nginx` |
+| host nginx | `443` → `helali.rmhosseini.ir` | (system) |
+| docker nginx | `3032` (TLS gateway) | `helali-nginx` |
 | backend | `3030` → `3000` | `helali-backend` |
 | frontend | `3031` → `3000` | `helali-frontend` |
 | minio | `9010` / `9011` | `helali-minio` |
 | postgres / redis | internal | `helali-postgres` / `helali-redis` |
 
-Remote: `/opt/helali`
+Remote dir: `/opt/helali`
 
-## Secrets (GitHub Actions)
+## Cloudflare
 
-| Secret | Required |
-|--------|----------|
-| `SSH_PRIVATE_KEY` | yes (deploy skipped with warning if missing) |
-| `SSH_HOST` | yes (default `5.159.49.36`) |
-| `SSH_USER` | yes (default `root`) |
-| `GHCR_PULL_TOKEN` | recommended for private GHCR pull on VPS |
+- DNS: `A` `helali` → `109.70.78.80` (proxied)
+- SSL mode: **Full (strict)** after certbot on the VPS
 
-## First boot
+## GitHub Actions
+
+| Setting | Value |
+|---------|--------|
+| Repo variable `DEPLOY_RUNS_ON` | `["self-hosted","helali"]` |
+| Secret `TLS_HOST` (optional) | `helali.rmhosseini.ir` |
+| Secret `GHCR_PULL_TOKEN` | recommended for private GHCR pull |
+| Secret `SSH_PRIVATE_KEY` | optional fallback for SSH deploy from GitHub-hosted |
+
+Self-hosted runner label: `helali` (alongside `zarva` / `safshekan` on the same VPS).
+
+## First-time host nginx + cert
 
 ```bash
-mkdir -p /opt/helali/docker /opt/helali/data
+# on VPS (root or setup-domain workflow)
+cd /opt/helali   # after CI syncs repo scripts
+git clone … or copy scripts/setup-host-domain-helali.sh + scripts/host-nginx/
+DOMAIN=helali.rmhosseini.ir bash scripts/setup-host-domain-helali.sh
+```
+
+Or: Actions → **Setup helali.rmhosseini.ir (host nginx + certbot)** → Run workflow.
+
+## Manual deploy (on VPS)
+
+```bash
 cd /opt/helali
-# after first Actions sync of compose + nginx.conf:
-cp .env.example .env   # set passwords / ports
-docker compose pull
-docker compose up -d postgres redis --wait
-docker compose up -d minio
-docker compose run --rm --no-deps backend npx prisma migrate deploy --schema=apps/backend/prisma/schema.prisma
-docker compose up -d --force-recreate --wait backend
-docker compose up -d --force-recreate --wait frontend
-docker compose up -d --force-recreate --wait nginx
-docker ps --filter name=helali
+export BACKEND_IMAGE=ghcr.io/rezahosseini14/helali-backend:TAG
+export FRONTEND_IMAGE=ghcr.io/rezahosseini14/helali-frontend:TAG
+export TLS_HOST=helali.rmhosseini.ir
+bash ci-deploy-on-host.sh
+```
+
+## Verify
+
+```bash
+curl -fsS https://helali.rmhosseini.ir/api/v1/health
 curl -kfsS https://127.0.0.1:3032/api/v1/health
 ```
 
 ## Rollback
 
-Pin previous `BACKEND_IMAGE` / `FRONTEND_IMAGE` in `.env`, then:
-
-```bash
-docker compose pull backend frontend
-docker compose up -d --force-recreate --wait backend
-docker compose up -d --force-recreate --wait frontend
-docker compose up -d --force-recreate --wait nginx
-```
+Pin previous `BACKEND_IMAGE` / `FRONTEND_IMAGE` in `.env`, then re-run `ci-deploy-on-host.sh` or push to `main`.
