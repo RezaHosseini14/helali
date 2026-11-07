@@ -25,6 +25,14 @@ if ! echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_LOGIN_USER" --password-
   exit 1
 fi
 
+if [ -f .env ] && [ ! -w .env ]; then
+  if sudo -n chown "$(id -un):$(id -gn)" .env 2>/dev/null; then
+    echo "--> Fixed .env ownership for $(id -un)"
+  else
+    echo "::error::.env is not writable by $(id -un) (on VPS: chown $(id -un):$(id -gn) ${REMOTE_DIR}/.env)"
+    exit 1
+  fi
+fi
 touch .env
 if grep -q '^BACKEND_IMAGE=' .env; then
   sed -i "s|^BACKEND_IMAGE=.*|BACKEND_IMAGE=${BACKEND_IMAGE}|" .env

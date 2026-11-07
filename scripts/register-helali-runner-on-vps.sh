@@ -28,18 +28,18 @@ if [[ ! -x ./config.sh ]]; then
   tar xzf runner.tgz && rm runner.tgz
 fi
 
-./config.sh remove --unattended 2>/dev/null || true
-./config.sh \
-  --url "https://github.com/${REPO}" \
-  --token "$REGISTRATION_TOKEN" \
-  --unattended \
-  --labels "$LABELS" \
-  --name "helali-vps"
+chown -R "${RUNNER_USER}:${RUNNER_USER}" "$RUNNER_DIR"
 
-chown -R "${RUNNER_USER}:${RUNNER_USER}" "$RUNNER_DIR" 2>/dev/null || true
+run_as_runner() {
+  su - "${RUNNER_USER}" -s /bin/bash -c "cd '$RUNNER_DIR' && $*"
+}
+
+run_as_runner './config.sh remove --unattended 2>/dev/null || true'
+run_as_runner "./config.sh --url 'https://github.com/${REPO}' --token '${REGISTRATION_TOKEN}' --unattended --labels '${LABELS}' --name helali-vps"
+
 chown -R "${RUNNER_USER}:${RUNNER_USER}" /opt/helali 2>/dev/null || true
 
-./svc.sh install "${RUNNER_USER}" 2>/dev/null || ./svc.sh install
-./svc.sh start
-./svc.sh status || true
+(cd "$RUNNER_DIR" && ./svc.sh install "${RUNNER_USER}")
+(cd "$RUNNER_DIR" && ./svc.sh start)
+(cd "$RUNNER_DIR" && ./svc.sh status) || true
 echo "Done. In GitHub set DEPLOY_RUNS_ON=[\"self-hosted\",\"helali\"] and restore deploy runs-on in ci-cd.yml to vars.DEPLOY_RUNS_ON."

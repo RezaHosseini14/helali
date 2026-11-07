@@ -331,6 +331,9 @@ jobs:
           cp scripts/ci-deploy-on-host.sh "$REMOTE_DIR/ci-deploy-on-host.sh"
           chmod +x "$REMOTE_DIR/ci-deploy-on-host.sh"
           test -f "$REMOTE_DIR/config.json" || printf '{}\n' > "$REMOTE_DIR/config.json"
+          if [ -f "$REMOTE_DIR/.env" ] && [ ! -w "$REMOTE_DIR/.env" ]; then
+            sudo chown "$(id -un):$(id -gn)" "$REMOTE_DIR/.env"
+          fi
 
       - name: Pull images & rolling restart on server
         env:
