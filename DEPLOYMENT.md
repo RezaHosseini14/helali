@@ -27,9 +27,15 @@ Remote dir: `/opt/helali`
 | Secret `GHCR_PULL_TOKEN` | recommended for private GHCR pull |
 | Secret `SSH_PRIVATE_KEY` | optional fallback for SSH deploy from GitHub-hosted |
 
-Self-hosted runner on the same VPS as zarva/saf-shekan: labels **`self-hosted`**, **`helali`** (each repo has its own runner registration — copy what you did for `zarva-vps`).
+## Self-hosted runner (same as zarva — required when `DEPLOY_RUNS_ON` is set)
 
-اگر GitHub نتواند به VPS SSH بزند: runner روی VPS + `DEPLOY_RUNS_ON=["self-hosted","helali"]` (مثل زروا و صف‌شکن). ثبت runner: همان مراحل **Settings → Runners → New** در ریپو helali و `config.sh` روی VPS در `/opt/actions-runner-helali` (کپی الگوی زروا).
+1. GitHub **RezaHosseini14/helali** → **Settings → Actions → Runners → New self-hosted runner** (Linux x64).  
+2. On VPS `109.70.78.80`: use a **second** install dir (zarva already uses `/opt/actions-runner`): e.g. `/opt/actions-runner-helali`, run the printed `./config.sh --url https://github.com/RezaHosseini14/helali --token …` with labels **`self-hosted`**, **`helali`**.  
+3. `./svc.sh install` + `./svc.sh start` (user `github-runner` or same as zarva).  
+4. Repo **Settings → Variables → Actions**: `DEPLOY_RUNS_ON` = `["self-hosted","helali"]` (mirror zarva’s `["self-hosted","zarva"]`).  
+5. Ensure `/opt/helali` exists and the runner user can run Docker; re-run CI.
+
+Until step 2–3 are done, deploy jobs show **Waiting for a runner** — zarva does not, because `zarva-vps` is already online.
 
 ## First-time host nginx + cert
 
