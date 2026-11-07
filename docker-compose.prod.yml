@@ -48,20 +48,29 @@ services:
       - helali-net
 
   minio:
-    image: minio/minio:RELEASE.2022-10-24T18-35-07Z
+    # Official MinIO images are often blocked on IR VPS; SeaweedFS exposes S3-compatible API on :9000.
+    image: ${MINIO_IMAGE:-chrislusf/seaweedfs:3.79}
     container_name: helali-minio
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    command:
+      [
+        "server",
+        "-dir=/data",
+        "-ip=minio",
+        "-ip.bind=0.0.0.0",
+        "-master.port=9333",
+        "-volume.port=8080",
+        "-filer",
+        "-s3",
+        "-s3.port=9000",
+      ]
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minio99}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minio123}
-      MINIO_API_CORS_ALLOW_ORIGIN: '*'
     ports:
       - "${MINIO_PUBLIC_PORT:-9010}:9000"
-      - "${MINIO_CONSOLE_PORT:-9011}:9001"
     volumes:
       - helali_miniodata:/data
-    # Scratch-based MinIO has no curl — never use --wait on this service.
     networks:
       - helali-net
 
