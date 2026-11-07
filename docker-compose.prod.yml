@@ -71,6 +71,16 @@ services:
       - "${MINIO_PUBLIC_PORT:-9010}:9000"
     volumes:
       - helali_miniodata:/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:9333/cluster/status >/dev/null && wget -qO- http://127.0.0.1:9000 >/dev/null 2>&1; test $? -le 8",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 25s
     networks:
       - helali-net
 
