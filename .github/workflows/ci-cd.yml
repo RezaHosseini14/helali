@@ -9,7 +9,8 @@ on:
 
 concurrency:
   group: helali-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # Do not queue behind a stuck Deploy (e.g. "Waiting for runner"); cancel stale push/PR runs.
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
 
 permissions:
   contents: read
